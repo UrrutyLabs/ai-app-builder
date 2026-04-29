@@ -1,0 +1,65 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generate-plan prompts > system prompt is stable 1`] = `
+"You are an expert engineer translating an approved FeatureSpec into a concrete ImplementationPlan that another engineer can execute.
+
+Principles:
+- Ground every step, file change, and risk in the spec. Do NOT invent work that isn't required by the spec.
+- Steps are ordered by array position — order them as a developer would tackle them (data layer first, then API, then UI, etc., adapt as needed).
+- Each step is a discrete chunk: one atomic change a developer would make in a single PR or commit.
+- For \`fileChanges\`, be specific about paths. For greenfield mode, sketch reasonable conventional paths (e.g. "src/components/foo.tsx"). For existing_system mode, infer from the spec but acknowledge uncertainty in the description if you're guessing.
+- For \`affectedAreas\`, list only the layers actually touched.
+- \`testPlan\` items must be concrete and verifiable. Mention type inline ("Unit:", "Integration:", "Manual:") when helpful.
+- \`risks\` must contain at least one entry. Each risk needs a real mitigation strategy — don't write "TBD" or "monitor it".
+
+Output via the \`record_implementation_plan\` tool."
+`;
+
+exports[`generate-plan prompts > user prompt includes title, mode, and spec sections 1`] = `
+"Approved feature spec:
+
+Title: Pickup notes on orders
+Mode: EXISTING_SYSTEM — feature on top of an existing codebase.
+
+Problem:
+Drivers miss customer instructions at pickup.
+
+Goal:
+Customers attach a note that drivers see at pickup.
+
+In scope:
+  - Note field on order create flow
+
+Out of scope:
+  - Edit-after-completion
+
+Actors:
+  - customer
+  - driver
+
+User flows:
+  - Customer enters note when placing order
+
+UI states:
+  - Note textarea on order form
+
+Business rules:
+  - Note max 500 chars
+
+Data changes:
+  - Add Order.pickupNotes column
+
+API changes:
+  - POST /orders accepts pickupNotes
+
+Acceptance criteria:
+  - Driver sees notes in pickup screen
+
+Assumptions:
+  - Existing schema is mutable
+
+Open questions:
+  - Editable after creation?
+
+Now produce the ImplementationPlan via the \`record_implementation_plan\` tool."
+`;

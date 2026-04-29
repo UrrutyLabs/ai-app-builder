@@ -1,0 +1,17 @@
+{
+  "title": "string",
+  "problem": "string",
+  "goal": "string",
+  "mode": "greenfield | existing_system",
+  "scope": {
+    "in": ["string"],
+    "out": ["string"]
+  },
+  "actors": ["string"],
+  "userFlows": ["string"],
+  "uiStates": ["string"],
+  "businessRules": ["string"],
+  "acceptanceCriteria": ["string"],
+  "assumptions": ["string"],
+  "openQuestions": ["string"]
+}

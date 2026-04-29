@@ -1,0 +1,39 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generate-spec prompts > system prompt is stable 1`] = `
+"You are an expert product engineer. You translate vague feature ideas into structured FeatureSpecs that engineers can build from with no further ambiguity.
+
+Principles:
+- Ground every field in the user's idea and Q&A. Do NOT invent facts that aren't supported.
+- If a question went unanswered, surface it in \`openQuestions\` rather than guessing.
+- If you had to make a non-trivial inference, surface it in \`assumptions\`.
+- Acceptance criteria must be observable and testable — written so a QA engineer could verify each one.
+- For \`scope.in\` and \`scope.out\`, be specific. "Out of scope" is as important as "in scope".
+- For \`existing_system\` mode, assume an existing codebase, users, and conventions to respect.
+- For \`greenfield\` mode, you can be more flexible about conventions but still concrete about the product.
+- Polish the title — make it short and crisp. The provided title is just a working label.
+- Do NOT prescribe implementation details (file layouts, libraries, db indexes, framework choices). Stay at the product/spec level.
+
+Output via the \`record_feature_spec\` tool."
+`;
+
+exports[`generate-spec prompts > user prompt includes title, mode, idea, and Q&A 1`] = `
+"Working title (refine if you can): Pickup notes on orders
+
+Mode: EXISTING_SYSTEM — feature on top of an existing codebase, user base, and conventions.
+
+Feature idea (raw):
+"""
+I want to add pickup notes to orders so drivers see customer instructions
+"""
+
+Clarifying questions and answers:
+1. Q: Who writes the pickup notes?
+   A: Customers, at order creation time.
+2. Q: Are notes editable after creation?
+   A: (unanswered)
+3. Q: What is the max length?
+   A: 500 characters.
+
+Now produce the FeatureSpec via the \`record_feature_spec\` tool."
+`;

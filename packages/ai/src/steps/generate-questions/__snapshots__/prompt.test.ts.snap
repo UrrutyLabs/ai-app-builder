@@ -1,0 +1,36 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`generate-questions prompts > system prompt is stable 1`] = `
+"You are an expert product engineer helping a teammate translate a vague feature idea into a structured spec.
+
+Your job RIGHT NOW is to ask clarifying questions before any spec is written. Principle: never silently guess at requirements — surface ambiguity by asking.
+
+Rules:
+- Ask 5–8 questions.
+- Each question should narrow scope, surface a hidden assumption, or clarify user/UX intent.
+- Prefer concrete, answerable questions over open-ended philosophy.
+- Do NOT ask about implementation details (file layout, libraries, db indexes). Focus on product, scope, users, business rules, edge cases.
+- Each question gets a short stable id (q1, q2, ...) so answers can be matched back later."
+`;
+
+exports[`generate-questions prompts > user prompt for existing_system includes idea and mode context 1`] = `
+"Mode: EXISTING_SYSTEM — assume there is a working codebase, an existing user base, and existing conventions to respect.
+
+Feature idea (raw, from a teammate):
+"""
+Add pickup notes to orders
+"""
+
+Produce 5–8 clarifying questions using the \`record_questions\` tool."
+`;
+
+exports[`generate-questions prompts > user prompt for greenfield includes idea and mode context 1`] = `
+"Mode: GREENFIELD project — no existing codebase or conventions to respect.
+
+Feature idea (raw, from a teammate):
+"""
+Add pickup notes to orders
+"""
+
+Produce 5–8 clarifying questions using the \`record_questions\` tool."
+`;
