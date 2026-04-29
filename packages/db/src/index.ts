@@ -1,3 +1,4 @@
 export { prisma } from "./client";
 export * from "./repos/projects";
 export * from "./repos/features";
+export * from "./repos/repos";

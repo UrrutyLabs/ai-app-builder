@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`summarizeConventions > renders a stable summary for a populated value 1`] = `
+"Conventions (existing system):
+- Framework: Next.js 16.2.0
+- Language: TypeScript (strict mode)
+- Tests: Vitest, Playwright
+- Styling: Tailwind v4
+- ORM: Prisma → PostgreSQL
+- Forms/validation: react-hook-form + Zod
+- Monorepo: Turborepo + pnpm workspaces
+- Package manager: pnpm"
+`;

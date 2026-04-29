@@ -54,3 +54,18 @@ export async function getProjectById(id: string): Promise<ProjectRecord | null> 
   const row = await prisma.project.findUnique({ where: { id } });
   return row ? toRecord(row) : null;
 }
+
+export async function updateProject(input: {
+  id: string;
+  name: string;
+  description?: string | null;
+}): Promise<ProjectRecord> {
+  const row = await prisma.project.update({
+    where: { id: input.id },
+    data: {
+      name: input.name,
+      description: input.description ?? null,
+    },
+  });
+  return toRecord(row);
+}

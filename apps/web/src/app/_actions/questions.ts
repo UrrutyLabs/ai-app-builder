@@ -8,9 +8,11 @@ import { generateQuestions } from "@repo/ai";
 import {
   getFeatureById,
   getProjectById,
+  getRepoByProjectId,
   setFeatureQuestions,
   type FeatureRecord,
 } from "@repo/db";
+import { summarizeConventions, summarizeTree } from "@repo/repos";
 import { toActionError } from "@/lib/action-error";
 
 const InputSchema = z.object({
@@ -29,9 +31,17 @@ export async function generateQuestionsAction(
     const project = await getProjectById(feature.projectId);
     if (!project) throw new NotFoundError(`Project ${feature.projectId} not found`);
 
+    const repo = await getRepoByProjectId(feature.projectId);
+    const repoContext = repo?.fileTree ? summarizeTree(repo.fileTree) : null;
+    const conventionsContext = repo?.conventions
+      ? summarizeConventions(repo.conventions) || null
+      : null;
+
     const questions = await generateQuestions({
       idea: feature.idea,
       mode: project.mode,
+      repoContext,
+      conventionsContext,
     });
 
     const updated = await setFeatureQuestions(featureId, questions);

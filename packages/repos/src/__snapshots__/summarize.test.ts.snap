@@ -1,0 +1,13 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`summarizeTree > renders a stable summary for a monorepo fixture 1`] = `
+"Repo structure:
+- apps/ — 4 files
+  - apps/web/ — 4 files (incl. next.config.js, package.json)
+- packages/ — 5 files (incl. db/prisma/schema.prisma)
+  - packages/db/ — 3 files (incl. package.json, prisma/schema.prisma)
+  - packages/domain/ — 2 files (incl. package.json)
+- Top-level: README.md, package.json, tsconfig.json, turbo.json
+
+Total: 13 source files. Top extensions: .json (6), .tsx (2), .ts (2), .md (1), .js (1)."
+`;

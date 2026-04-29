@@ -19,9 +19,11 @@ import {
   approveFeatureSpec,
   getFeatureById,
   getProjectById,
+  getRepoByProjectId,
   setFeatureSpec,
   type FeatureRecord,
 } from "@repo/db";
+import { summarizeTree } from "@repo/repos";
 import { toActionError } from "@/lib/action-error";
 
 const FeatureIdInput = z.object({
@@ -49,12 +51,16 @@ export async function generateSpecAction(
     const questions = QuestionListSchema.parse(feature.questions);
     const answers = AnswerListSchema.parse(feature.answers);
 
+    const repo = await getRepoByProjectId(feature.projectId);
+    const repoContext = repo?.fileTree ? summarizeTree(repo.fileTree) : null;
+
     const spec = await generateSpec({
       title: feature.title,
       idea: feature.idea,
       mode: project.mode,
       questions,
       answers,
+      repoContext,
     });
 
     const updated = await setFeatureSpec(featureId, spec);

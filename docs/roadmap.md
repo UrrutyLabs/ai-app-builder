@@ -26,7 +26,7 @@ What v0.1 does **not** include: auth, repo indexing, GitHub integration, spec ve
 
 **Theme:** turn the prototype into something you can put in front of teammates without apologizing.
 
-- **Auth + multi-tenancy** (architecture.md §11). `User` model, scope `Project.userId`, sign-in flow. Probably NextAuth or Clerk. Without this, you can't share with anyone.
+- **Auth + multi-tenancy** (architecture.md §11). Scope `Project.userId`, sign-in flow. **Recommended: Neon Auth** (beta, powered by Stack Auth) — users sync directly into `neon_auth.users_sync` in our existing Postgres, so `Project.userId` is a plain foreign key with no webhook sync layer to maintain. Fallback to Clerk if beta blockers appear; the migration would be a few hours, not a rewrite. Without auth, you can't share with anyone.
 - **UI polish.** shadcn/ui migration for the spec editor (the longest form on the site), `sonner` for toast notifications, loading skeletons during AI calls.
 - **Streaming spec generation.** User watches the spec materialize instead of staring at a spinner for 20+ seconds. Big perceived-quality improvement.
 - **Spec / plan templates.** Pre-built starter templates ("Frontend feature with new UI", "API endpoint", "Migration", "Background job") that pre-fill mode and seed sections.
