@@ -20,15 +20,23 @@ import {
   getFeatureById,
   getProjectById,
   getRepoByProjectId,
+  searchSimilarFiles,
   setFeatureSpec,
   type FeatureRecord,
 } from "@repo/db";
-import { summarizeTree } from "@repo/repos";
+import {
+  renderSnippets,
+  summarizeConventions,
+  summarizeTree,
+} from "@repo/repos";
+import { embedQuery } from "@repo/repos/server";
 import { toActionError } from "@/lib/action-error";
 
 const FeatureIdInput = z.object({
   featureId: z.string().min(1),
 });
+
+const TOP_K = 8;
 
 export async function generateSpecAction(
   raw: unknown,
@@ -53,6 +61,23 @@ export async function generateSpecAction(
 
     const repo = await getRepoByProjectId(feature.projectId);
     const repoContext = repo?.fileTree ? summarizeTree(repo.fileTree) : null;
+    const conventionsContext = repo?.conventions
+      ? summarizeConventions(repo.conventions) || null
+      : null;
+
+    let codeContext: string | null = null;
+    if (repo) {
+      try {
+        const query = `${feature.idea}\n\n${answers
+          .map((a) => a.text)
+          .join("\n")}`;
+        const queryEmbedding = await embedQuery(query);
+        const snippets = await searchSimilarFiles(repo.id, queryEmbedding, TOP_K);
+        if (snippets.length > 0) codeContext = renderSnippets(snippets);
+      } catch (err) {
+        console.error("[generateSpec] retrieval failed:", err);
+      }
+    }
 
     const spec = await generateSpec({
       title: feature.title,
@@ -61,6 +86,8 @@ export async function generateSpecAction(
       questions,
       answers,
       repoContext,
+      conventionsContext,
+      codeContext,
     });
 
     const updated = await setFeatureSpec(featureId, spec);

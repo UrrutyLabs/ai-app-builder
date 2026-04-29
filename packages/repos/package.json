@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./server": "./src/server.ts",
     "./secure": "./src/secure.ts"
   },
   "scripts": {
@@ -14,7 +15,8 @@
   },
   "dependencies": {
     "@octokit/rest": "^21.0.2",
-    "@repo/domain": "workspace:*"
+    "@repo/domain": "workspace:*",
+    "openai": "^4.79.0"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",

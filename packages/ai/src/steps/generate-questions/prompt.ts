@@ -3,6 +3,7 @@ export interface GenerateQuestionsInput {
   mode: "greenfield" | "existing_system";
   repoContext?: string | null;
   conventionsContext?: string | null;
+  codeContext?: string | null;
 }
 
 export const SYSTEM_PROMPT = `You are an expert product engineer helping a teammate translate a vague feature idea into a structured spec.
@@ -28,13 +29,16 @@ export function buildUserPrompt(input: GenerateQuestionsInput): string {
   const conventionsBlock = input.conventionsContext
     ? `\n\n${input.conventionsContext}\n`
     : "";
+  const codeBlock = input.codeContext
+    ? `\n\n${input.codeContext}\n`
+    : "";
 
   return `Mode: ${modeContext}
 
 Feature idea (raw, from a teammate):
 """
 ${input.idea}
-"""${repoBlock}${conventionsBlock}
+"""${repoBlock}${conventionsBlock}${codeBlock}
 
 Produce 5–8 clarifying questions using the \`record_questions\` tool.`;
 }

@@ -10,12 +10,17 @@ import {
   fetchRepoTree,
   parseGitHubUrl,
 } from "@repo/repos";
-import { decryptToken, encryptToken } from "@repo/repos/secure";
+import {
+  decryptToken,
+  encryptToken,
+  fetchAndEmbedRepoFiles,
+} from "@repo/repos/server";
 import {
   deleteRepo,
   getEncryptedTokenForProject,
   getProjectById,
   getRepoByProjectId,
+  replaceRepoEmbeddings,
   upsertRepo,
   type RepoRecord,
 } from "@repo/db";
@@ -55,6 +60,19 @@ export async function connectRepoAction(
       fileTree: fetched.tree,
       conventions,
     });
+
+    // Embeddings step. Failure here doesn't fail the connect — repo can still
+    // be used without retrieval, just with the tree + conventions context.
+    try {
+      const indexed = await fetchAndEmbedRepoFiles({
+        ref: { owner: fetched.owner, repo: fetched.repo },
+        token: input.pat,
+        fileTree: fetched.tree,
+      });
+      await replaceRepoEmbeddings(record.id, indexed);
+    } catch (err) {
+      console.error("[connectRepo] embedding failed:", err);
+    }
 
     revalidatePath(`/projects/${input.projectId}`);
     return { ok: true, data: record };
@@ -101,6 +119,17 @@ export async function refreshRepoAction(
       fileTree: fetched.tree,
       conventions,
     });
+
+    try {
+      const indexed = await fetchAndEmbedRepoFiles({
+        ref: { owner: fetched.owner, repo: fetched.repo },
+        token,
+        fileTree: fetched.tree,
+      });
+      await replaceRepoEmbeddings(record.id, indexed);
+    } catch (err) {
+      console.error("[refreshRepo] embedding failed:", err);
+    }
 
     revalidatePath(`/projects/${projectId}`);
     return { ok: true, data: record };

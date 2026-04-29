@@ -10,3 +10,5 @@ export {
   summarizeConventions,
   shortStackLabel,
 } from "./summarize-conventions";
+export { renderSnippets, type CodeSnippet } from "./render-snippets";
+export type { IndexedFile } from "./index-files";

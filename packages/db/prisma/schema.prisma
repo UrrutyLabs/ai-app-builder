@@ -1,11 +1,13 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [vector]
 }
 
 enum Mode {
@@ -34,9 +36,9 @@ model Project {
 }
 
 model Repo {
-  id              String    @id @default(cuid())
-  projectId       String    @unique
-  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id              String              @id @default(cuid())
+  projectId       String              @unique
+  project         Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
   owner           String
   repo            String
   defaultBranch   String
@@ -44,8 +46,22 @@ model Repo {
   fileTree        Json?
   conventions     Json?
   lastIndexedAt   DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  embeddings      RepoFileEmbedding[]
+}
+
+model RepoFileEmbedding {
+  id        String                       @id @default(cuid())
+  repoId    String
+  repo      Repo                         @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  path      String
+  content   String
+  embedding Unsupported("vector(1536)")
+  updatedAt DateTime                     @default(now())
+
+  @@unique([repoId, path])
+  @@index([repoId])
 }
 
 model Feature {

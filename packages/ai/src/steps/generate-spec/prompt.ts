@@ -8,6 +8,7 @@ export interface GenerateSpecInput {
   answers: Answer[];
   repoContext?: string | null;
   conventionsContext?: string | null;
+  codeContext?: string | null;
 }
 
 export const SYSTEM_PROMPT = `You are an expert product engineer. You translate vague feature ideas into structured FeatureSpecs that engineers can build from with no further ambiguity.
@@ -45,6 +46,9 @@ export function buildUserPrompt(input: GenerateSpecInput): string {
   const conventionsBlock = input.conventionsContext
     ? `\n\n${input.conventionsContext}\n`
     : "";
+  const codeBlock = input.codeContext
+    ? `\n\n${input.codeContext}\n`
+    : "";
 
   return `Working title (refine if you can): ${input.title}
 
@@ -56,7 +60,7 @@ ${input.idea}
 """
 
 Clarifying questions and answers:
-${qaLines}${repoBlock}${conventionsBlock}
+${qaLines}${repoBlock}${conventionsBlock}${codeBlock}
 
 Now produce the FeatureSpec via the \`record_feature_spec\` tool.`;
 }

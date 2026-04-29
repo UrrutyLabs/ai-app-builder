@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  countRepoEmbeddings,
   getProjectById,
   getRepoByProjectId,
   listFeaturesByProject,
@@ -28,6 +29,8 @@ export default async function ProjectPage({
       ? getRepoByProjectId(projectId)
       : Promise.resolve(null),
   ]);
+
+  const embeddingCount = repo ? await countRepoEmbeddings(repo.id) : 0;
 
   return (
     <div className="space-y-8">
@@ -84,7 +87,11 @@ export default async function ProjectPage({
           <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             Connected repo
           </h2>
-          <RepoPanel projectId={project.id} repo={repo} />
+          <RepoPanel
+            projectId={project.id}
+            repo={repo}
+            embeddingCount={embeddingCount}
+          />
         </div>
       ) : null}
 

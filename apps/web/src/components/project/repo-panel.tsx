@@ -23,9 +23,11 @@ function formatRelative(date: Date): string {
 export function RepoPanel({
   projectId,
   repo,
+  embeddingCount,
 }: {
   projectId: string;
   repo: RepoRecord | null;
+  embeddingCount: number;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -77,8 +79,11 @@ export function RepoPanel({
             </span>
           </div>
           <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-            {fileCount} file{fileCount === 1 ? "" : "s"} indexed
+            {fileCount} file{fileCount === 1 ? "" : "s"} in tree
             {truncated ? " (truncated at 5000)" : ""}
+            {embeddingCount > 0
+              ? ` · ${embeddingCount} embedded for retrieval`
+              : ""}
             {repo.lastIndexedAt
               ? ` · last refreshed ${formatRelative(repo.lastIndexedAt)}`
               : ""}
