@@ -9,6 +9,8 @@ export type ProjectRecord = {
   name: string;
   mode: DomainMode;
   description: string | null;
+  specPath: string | null;
+  planPath: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -24,6 +26,8 @@ const toRecord = (p: PrismaProject): ProjectRecord => ({
   name: p.name,
   mode: toDomainMode(p.mode),
   description: p.description,
+  specPath: p.specPath,
+  planPath: p.planPath,
   createdAt: p.createdAt,
   updatedAt: p.updatedAt,
 });
@@ -66,6 +70,17 @@ export async function updateProject(input: {
       name: input.name,
       description: input.description ?? null,
     },
+  });
+  return toRecord(row);
+}
+
+export async function updateProjectPaths(
+  id: string,
+  paths: { specPath: string; planPath: string },
+): Promise<ProjectRecord> {
+  const row = await prisma.project.update({
+    where: { id },
+    data: { specPath: paths.specPath, planPath: paths.planPath },
   });
   return toRecord(row);
 }

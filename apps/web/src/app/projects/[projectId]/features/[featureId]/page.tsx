@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getFeatureById, getProjectById } from "@repo/db";
+import {
+  getFeatureById,
+  getProjectById,
+  getRepoByProjectId,
+} from "@repo/db";
+import { countGeneratable, countScaffoldable } from "@/lib/scaffold-stubs";
 import {
   AnswerListSchema,
   FeatureSpecSchema,
@@ -16,6 +21,7 @@ import { ApproveSpecButton } from "@/components/feature/approve-spec-button";
 import { GeneratePlanButton } from "@/components/feature/generate-plan-button";
 import { PlanView } from "@/components/feature/plan-view";
 import { ExportButtons } from "@/components/feature/export-buttons";
+import { CreatePrForm } from "@/components/feature/create-pr-form";
 
 export default async function FeaturePage({
   params,
@@ -32,6 +38,11 @@ export default async function FeaturePage({
   ]);
   if (!project || !feature || feature.projectId !== project.id) notFound();
 
+  const repo =
+    project.mode === "existing_system"
+      ? await getRepoByProjectId(project.id)
+      : null;
+
   const questions = feature.questions
     ? QuestionListSchema.parse(feature.questions)
     : null;
@@ -47,6 +58,18 @@ export default async function FeaturePage({
   const hasAnswers = !!answers && answers.length > 0;
   const hasSpec = !!spec;
   const hasPlan = !!plan;
+
+  const existingPaths = new Set(
+    repo?.fileTree?.entries
+      .filter((e) => e.type === "file")
+      .map((e) => e.path) ?? [],
+  );
+  const scaffoldableCount = plan
+    ? countScaffoldable(plan, existingPaths)
+    : 0;
+  const generatable = plan
+    ? countGeneratable(plan, existingPaths)
+    : { creatable: 0, modifiable: 0, total: 0 };
 
   const editingAnswers = edit === "answers";
   const editingSpec = edit === "spec" && hasSpec;
@@ -212,6 +235,45 @@ export default async function FeaturePage({
               Regenerating the plan will overwrite the current one.
             </p>
           ) : null}
+        </section>
+      ) : null}
+
+      {hasPlan && project.mode === "existing_system" && !editingSpec ? (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+            Pull request
+          </h2>
+          {feature.prUrl ? (
+            <p className="text-sm">
+              <span className="text-emerald-700 dark:text-emerald-400">
+                ✓ PR opened
+              </span>{" "}
+              ·{" "}
+              <a
+                href={feature.prUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-neutral-900 dark:hover:text-neutral-100"
+              >
+                {feature.prUrl}
+              </a>
+              {feature.prCreatedAt
+                ? ` · ${feature.prCreatedAt.toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}`
+                : ""}
+            </p>
+          ) : null}
+          <CreatePrForm
+            featureId={feature.id}
+            defaultSpecPath={project.specPath}
+            defaultPlanPath={project.planPath}
+            hasExistingPr={!!feature.prUrl}
+            scaffoldableCount={scaffoldableCount}
+            generatableCreate={generatable.creatable}
+            generatableModify={generatable.modifiable}
+          />
         </section>
       ) : null}
 

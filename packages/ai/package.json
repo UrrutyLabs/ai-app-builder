@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./steps/generate-questions": "./src/steps/generate-questions/index.ts",
     "./steps/generate-spec": "./src/steps/generate-spec/index.ts",
-    "./steps/generate-plan": "./src/steps/generate-plan/index.ts"
+    "./steps/generate-plan": "./src/steps/generate-plan/index.ts",
+    "./steps/generate-file": "./src/steps/generate-file/index.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",
@@ -16,7 +17,9 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.40.0",
+    "@babel/parser": "^7.26.3",
     "@repo/domain": "workspace:*",
+    "typescript": "5.9.2",
     "zod": "^3.24.0",
     "zod-to-json-schema": "^3.24.0"
   },
@@ -25,7 +28,6 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^22.15.3",
     "eslint": "^9.39.1",
-    "typescript": "5.9.2",
     "vitest": "^3.2.4"
   }
 }

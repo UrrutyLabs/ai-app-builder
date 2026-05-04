@@ -29,6 +29,8 @@ export type FeatureRecord = {
   spec: Prisma.JsonValue | null;
   plan: Prisma.JsonValue | null;
   approvedAt: Date | null;
+  prUrl: string | null;
+  prCreatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -44,6 +46,8 @@ const toRecord = (f: PrismaFeature): FeatureRecord => ({
   spec: f.spec,
   plan: f.plan,
   approvedAt: f.approvedAt,
+  prUrl: f.prUrl,
+  prCreatedAt: f.prCreatedAt,
   createdAt: f.createdAt,
   updatedAt: f.updatedAt,
 });
@@ -159,6 +163,20 @@ export async function setFeaturePlan(
     data: {
       plan: validated as Prisma.InputJsonValue,
       status: "PLAN_GENERATED",
+    },
+  });
+  return toRecord(row);
+}
+
+export async function setFeaturePr(
+  featureId: string,
+  url: string,
+): Promise<FeatureRecord> {
+  const row = await prisma.feature.update({
+    where: { id: featureId },
+    data: {
+      prUrl: url,
+      prCreatedAt: new Date(),
     },
   });
   return toRecord(row);

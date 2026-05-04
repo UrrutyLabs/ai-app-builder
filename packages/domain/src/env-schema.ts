@@ -11,6 +11,7 @@ export const EnvSchema = z.object({
   AI_MODEL_QUESTIONS: z.string().optional(),
   AI_MODEL_SPEC: z.string().optional(),
   AI_MODEL_PLAN: z.string().optional(),
+  AI_MODEL_CODE: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
