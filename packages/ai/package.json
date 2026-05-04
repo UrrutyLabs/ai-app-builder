@@ -8,7 +8,8 @@
     "./steps/generate-questions": "./src/steps/generate-questions/index.ts",
     "./steps/generate-spec": "./src/steps/generate-spec/index.ts",
     "./steps/generate-plan": "./src/steps/generate-plan/index.ts",
-    "./steps/generate-file": "./src/steps/generate-file/index.ts"
+    "./steps/generate-file": "./src/steps/generate-file/index.ts",
+    "./steps/check-consistency": "./src/steps/check-consistency/index.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

@@ -9,3 +9,8 @@ export type {
   GenerateFileInput,
   GeneratedFile,
 } from "./steps/generate-file";
+export { checkConsistency } from "./steps/check-consistency";
+export type {
+  CheckConsistencyInput,
+  ConsistencyIssue,
+} from "./steps/check-consistency";

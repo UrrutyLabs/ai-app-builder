@@ -1,3 +1,5 @@
+import type { ConsistencyIssue } from "@repo/ai";
+
 /**
  * Events emitted from the PR-creation route handler over a streamed response.
  * The client deserialises these and renders progress accordingly.
@@ -20,6 +22,7 @@ export type PrEvent =
       repaired: boolean;
     }
   | { type: "committing"; total: number }
+  | { type: "consistency-complete"; issueCount: number }
   | {
       type: "pr-opened";
       url: string;
@@ -28,6 +31,7 @@ export type PrEvent =
       generatedCount: number;
       modifiedCount: number;
       unverifiedFiles: string[];
+      consistencyIssues: ConsistencyIssue[];
     }
   | { type: "error"; code: string; message: string };
 
@@ -38,4 +42,5 @@ export interface PrSummary {
   generatedCount: number;
   modifiedCount: number;
   unverifiedFiles: string[];
+  consistencyIssues: ConsistencyIssue[];
 }

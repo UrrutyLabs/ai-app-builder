@@ -5,7 +5,11 @@ import {
   ImplementationPlanSchema,
 } from "@repo/domain/schemas";
 import { ConflictError, NotFoundError } from "@repo/domain";
-import { generateFile } from "@repo/ai";
+import {
+  checkConsistency,
+  generateFile,
+  type ConsistencyIssue,
+} from "@repo/ai";
 import {
   fetchFileWithSha,
   openPullRequest,
@@ -229,6 +233,26 @@ export async function runPrCreation(
     }
   }
 
+  // Cross-file consistency pass — only meaningful when generation produced
+  // more than one file. Failure here never blocks the PR.
+  let consistencyIssues: ConsistencyIssue[] = [];
+  if (input.fileMode === "generate" && extraFiles.length > 1) {
+    onProgress({ type: "step", label: "Checking cross-file consistency" });
+    try {
+      consistencyIssues = await checkConsistency({
+        spec,
+        files: extraFiles.map((f) => ({ path: f.path, content: f.content })),
+      });
+      onProgress({
+        type: "consistency-complete",
+        issueCount: consistencyIssues.length,
+      });
+    } catch (err) {
+      console.error("[runPrCreation] consistency check failed:", err);
+      onProgress({ type: "consistency-complete", issueCount: 0 });
+    }
+  }
+
   onProgress({
     type: "committing",
     total: 2 + extraFiles.length, // spec + plan + extras
@@ -245,6 +269,7 @@ export async function runPrCreation(
       generatedCount,
       modifiedCount,
       unverifiedFiles,
+      consistencyIssues,
     }),
     files: [
       { path: specFile, content: renderSpecDoc(feature, project, spec) },
@@ -273,5 +298,6 @@ export async function runPrCreation(
     generatedCount,
     modifiedCount,
     unverifiedFiles,
+    consistencyIssues,
   };
 }

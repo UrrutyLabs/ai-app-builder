@@ -41,9 +41,11 @@ export function PrProgress({
   const steps: string[] = [];
   const fileMap = new Map<string, FileRow>();
   let committing: number | null = null;
+  let consistencyIssueCount: number | null = null;
   let prUrl: string | null = null;
   let prNumber: number | null = null;
   let unverified: string[] = [];
+  let consistencyIssues: Array<{ path: string; description: string }> = [];
   let errorMsg: string | null = null;
 
   for (const e of events) {
@@ -73,6 +75,9 @@ export function PrProgress({
         }
         break;
       }
+      case "consistency-complete":
+        consistencyIssueCount = e.issueCount;
+        break;
       case "committing":
         committing = e.total;
         break;
@@ -80,6 +85,7 @@ export function PrProgress({
         prUrl = e.url;
         prNumber = e.number;
         unverified = e.unverifiedFiles;
+        consistencyIssues = e.consistencyIssues;
         break;
       case "error":
         errorMsg = `[${e.code}] ${e.message}`;
@@ -131,6 +137,18 @@ export function PrProgress({
         </div>
       ))}
 
+      {consistencyIssueCount !== null ? (
+        <div className="flex items-center gap-2">
+          <StatusIcon state="done" />
+          <span>
+            Consistency check{" "}
+            {consistencyIssueCount === 0
+              ? "— no issues found"
+              : `— ${consistencyIssueCount} issue${consistencyIssueCount === 1 ? "" : "s"} flagged`}
+          </span>
+        </div>
+      ) : null}
+
       {committing !== null && !prUrl && !errorMsg ? (
         <div className="flex items-center gap-2">
           <StatusIcon state="running" />
@@ -162,6 +180,22 @@ export function PrProgress({
                 ⚠️ {unverified.length} file
                 {unverified.length === 1 ? "" : "s"} did not pass verification
                 — review the diff carefully.
+              </div>
+            ) : null}
+            {consistencyIssues.length > 0 ? (
+              <div className="mt-1 space-y-0.5 text-xs text-amber-700 dark:text-amber-300">
+                <div>
+                  🔎 {consistencyIssues.length} cross-file consistency
+                  issue{consistencyIssues.length === 1 ? "" : "s"} flagged:
+                </div>
+                <ul className="ml-4 list-disc">
+                  {consistencyIssues.map((issue, i) => (
+                    <li key={i}>
+                      <span className="font-mono">{issue.path}</span> —{" "}
+                      {issue.description}
+                    </li>
+                  ))}
+                </ul>
               </div>
             ) : null}
           </div>

@@ -45,6 +45,7 @@ export async function POST(req: Request): Promise<Response> {
           generatedCount: summary.generatedCount,
           modifiedCount: summary.modifiedCount,
           unverifiedFiles: summary.unverifiedFiles,
+          consistencyIssues: summary.consistencyIssues,
         });
       } catch (err) {
         const e = toActionError(err);
