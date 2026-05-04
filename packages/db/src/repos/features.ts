@@ -127,16 +127,26 @@ export async function setFeatureSpec(
   spec: FeatureSpec,
 ): Promise<FeatureRecord> {
   const validated = FeatureSpecSchema.parse(spec);
-  const row = await prisma.feature.update({
-    where: { id: featureId },
-    data: {
-      spec: validated as Prisma.InputJsonValue,
-      // Re-running spec invalidates plan + approval.
-      plan: PrismaNS.DbNull,
-      approvedAt: null,
-      status: "SPEC_DRAFTED",
-    },
-  });
+  // Atomic: feature update + version snapshot. Each setFeatureSpec call adds
+  // one row to SpecVersion (history of every save).
+  const [row] = await prisma.$transaction([
+    prisma.feature.update({
+      where: { id: featureId },
+      data: {
+        spec: validated as Prisma.InputJsonValue,
+        // Re-running spec invalidates plan + approval.
+        plan: PrismaNS.DbNull,
+        approvedAt: null,
+        status: "SPEC_DRAFTED",
+      },
+    }),
+    prisma.specVersion.create({
+      data: {
+        featureId,
+        spec: validated as Prisma.InputJsonValue,
+      },
+    }),
+  ]);
   return toRecord(row);
 }
 

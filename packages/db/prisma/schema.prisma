@@ -67,19 +67,30 @@ model RepoFileEmbedding {
 }
 
 model Feature {
-  id          String        @id @default(cuid())
-  projectId   String
-  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  title       String
-  idea        String
-  status      FeatureStatus @default(DRAFT)
-  questions   Json?
-  answers     Json?
-  spec        Json?
-  plan        Json?
-  approvedAt  DateTime?
-  prUrl       String?
-  prCreatedAt DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id           String        @id @default(cuid())
+  projectId    String
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title        String
+  idea         String
+  status       FeatureStatus @default(DRAFT)
+  questions    Json?
+  answers      Json?
+  spec         Json?
+  plan         Json?
+  approvedAt   DateTime?
+  prUrl        String?
+  prCreatedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  specVersions SpecVersion[]
+}
+
+model SpecVersion {
+  id        String   @id @default(cuid())
+  featureId String
+  feature   Feature  @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  spec      Json
+  createdAt DateTime @default(now())
+
+  @@index([featureId, createdAt])
 }
