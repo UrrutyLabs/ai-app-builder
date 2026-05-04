@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  getEncryptedTokenForProject,
   getFeatureById,
   getProjectById,
   getRepoByProjectId,
 } from "@repo/db";
+import { decryptToken } from "@repo/repos/server";
+import { fetchPrStatus, type PrStatus } from "@/lib/pr-status";
+import { PrStatusBadge } from "@/components/feature/pr-status-badge";
 import { countGeneratable, countScaffoldable } from "@/lib/scaffold-stubs";
 import {
   AnswerListSchema,
@@ -79,6 +83,20 @@ export default async function FeaturePage({
   const showAnsweredView = hasQuestions && hasAnswers && !editingAnswers;
 
   const isApproved = feature.status === "SPEC_APPROVED" && !!feature.approvedAt;
+
+  // Best-effort fetch of PR status (open/merged/closed). Cached 5s in-process.
+  let prStatus: PrStatus | null = null;
+  if (feature.prUrl && repo) {
+    const encrypted = await getEncryptedTokenForProject(project.id);
+    if (encrypted) {
+      try {
+        const token = decryptToken(encrypted);
+        prStatus = await fetchPrStatus(feature.prUrl, token);
+      } catch (err) {
+        console.error("[FeaturePage] PR status fetch failed:", err);
+      }
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -244,26 +262,28 @@ export default async function FeaturePage({
             Pull request
           </h2>
           {feature.prUrl ? (
-            <p className="text-sm">
-              <span className="text-emerald-700 dark:text-emerald-400">
-                ✓ PR opened
-              </span>{" "}
-              ·{" "}
-              <a
-                href={feature.prUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-neutral-900 dark:hover:text-neutral-100"
-              >
-                {feature.prUrl}
-              </a>
-              {feature.prCreatedAt
-                ? ` · ${feature.prCreatedAt.toLocaleString(undefined, {
+            <div className="space-y-1 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <PrStatusBadge status={prStatus} />
+                <a
+                  href={feature.prUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-neutral-900 dark:hover:text-neutral-100"
+                >
+                  {feature.prUrl}
+                </a>
+              </div>
+              {feature.prCreatedAt ? (
+                <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                  Opened{" "}
+                  {feature.prCreatedAt.toLocaleString(undefined, {
                     dateStyle: "medium",
                     timeStyle: "short",
-                  })}`
-                : ""}
-            </p>
+                  })}
+                </div>
+              ) : null}
+            </div>
           ) : null}
           <CreatePrForm
             featureId={feature.id}
