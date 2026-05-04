@@ -8,10 +8,15 @@ import {
 } from "./prompt";
 import { verifySyntax } from "./verify";
 import { typecheck } from "./typecheck";
+import { applyEdits } from "./apply-edits";
+import { callEditsOnce } from "./edits";
 
 const TEMPERATURE = 0.2;
 const MAX_TOKENS = 8192;
 const SDK_RETRIES = 1;
+/** Files larger than this (chars) switch to SEARCH/REPLACE for modify actions
+ *  to keep the LLM's output bounded. */
+const LARGE_FILE_THRESHOLD = 6000;
 
 const ToolInputSchema = z.object({
   content: z.string().min(1),
@@ -41,22 +46,39 @@ export interface GeneratedFile {
   verified: boolean;
   /** Combined error message when verification failed; null otherwise. */
   verifyError: string | null;
-  /** True if any repair attempt was made (parse OR typecheck). */
+  /** True if any repair attempt was made. */
   repaired: boolean;
+  /** Strategy used: "full" (rewrite) or "edits" (SEARCH/REPLACE). */
+  strategy: "full" | "edits";
 }
 
 /**
- * Generate one file with up to two independent repair attempts:
- *   1. Initial generation
- *   2. If parse-check fails: repair attempt with parser error
- *   3. If typecheck fails (only run when parse-check passes): repair attempt
- *      with TS diagnostics
+ * Entry point. Picks a strategy based on the file change:
  *
- * Each repair is bounded to one attempt. If a check still fails after repair,
- * we keep whichever candidate is best and return verified=false (the reviewer
- * sees the issue in the PR diff plus a callout in the PR body).
+ * - `modify` actions on files > LARGE_FILE_THRESHOLD chars use SEARCH/REPLACE
+ *   (`generateFileViaEdits`) — the LLM's output is bounded by the size of
+ *   the change, not the file.
+ * - Everything else uses full-content generation (`generateFileViaFull`).
  */
 export async function generateFile(
+  input: GenerateFileInput,
+): Promise<GeneratedFile> {
+  const isLargeModify =
+    input.fileChange.action === "modify" &&
+    input.existingContent != null &&
+    input.existingContent.length > LARGE_FILE_THRESHOLD;
+
+  if (isLargeModify) {
+    return generateFileViaEdits(input);
+  }
+  return generateFileViaFull(input);
+}
+
+/**
+ * Full-content path with parse-check + typecheck repair loops.
+ * Up to two independent repair attempts (one for parse, one for typecheck).
+ */
+async function generateFileViaFull(
   input: GenerateFileInput,
 ): Promise<GeneratedFile> {
   const path = input.fileChange.path;
@@ -81,8 +103,6 @@ export async function generateFile(
     }
   }
 
-  // If parse still fails, don't even try typecheck (the compiler would just
-  // surface the same syntax error).
   if (!parseResult.ok) {
     return {
       path,
@@ -90,6 +110,7 @@ export async function generateFile(
       verified: false,
       verifyError: parseResult.error,
       repaired,
+      strategy: "full",
     };
   }
 
@@ -107,7 +128,6 @@ export async function generateFile(
       const candidateParse = verifySyntax(path, candidate);
       if (candidateParse.ok) {
         const candidateType = typecheck(path, candidate, input.previousFiles);
-        // Take the candidate if it strictly improved (or fixed) the errors.
         if (
           candidateType.ok ||
           candidateType.errors.length < typeResult.errors.length
@@ -122,15 +142,93 @@ export async function generateFile(
     }
   }
 
-  const verified = parseResult.ok && typeResult.ok;
-  const verifyError = !typeResult.ok ? typeResult.errors.join("\n") : null;
-
   return {
     path,
     content,
-    verified,
-    verifyError,
+    verified: typeResult.ok,
+    verifyError: typeResult.ok ? null : typeResult.errors.join("\n"),
     repaired,
+    strategy: "full",
+  };
+}
+
+/**
+ * SEARCH/REPLACE path for large modify actions:
+ *   1. Ask the LLM for edits.
+ *   2. Apply edits deterministically. If any fail to apply, retry once with
+ *      failure details.
+ *   3. Verify (parse + type). No further repair — the reviewer sees the diff
+ *      and any verification callouts in the PR body.
+ */
+async function generateFileViaEdits(
+  input: GenerateFileInput,
+): Promise<GeneratedFile> {
+  const path = input.fileChange.path;
+  // Caller invariant: existingContent is set for large modifies.
+  const existing = input.existingContent ?? "";
+
+  const editsInput = {
+    featureTitle: input.featureTitle,
+    featureIdea: input.featureIdea,
+    spec: input.spec,
+    fileChange: input.fileChange,
+    existingContent: existing,
+    conventionsContext: input.conventionsContext ?? null,
+    codeContext: input.codeContext ?? null,
+    previousFiles: input.previousFiles,
+  };
+
+  let edits = await callEditsOnce(editsInput);
+  let result = applyEdits(existing, edits);
+  let repaired = false;
+
+  // If any edit failed to apply, retry once with the failures fed back.
+  if (result.failures.length > 0) {
+    try {
+      edits = await callEditsOnce({
+        ...editsInput,
+        retryFailures: result.failures,
+      });
+      const retried = applyEdits(existing, edits);
+      // Take the retry only if it strictly improved things.
+      if (retried.failures.length < result.failures.length) {
+        result = retried;
+      }
+      repaired = true;
+    } catch {
+      // Keep first attempt.
+    }
+  }
+
+  const editFailureMessage =
+    result.failures.length > 0
+      ? `Edit application failures (${result.failures.length}):\n${result.failures
+          .map((f) => `- ${f.reason}`)
+          .join("\n")}`
+      : null;
+
+  const parseResult = verifySyntax(path, result.content);
+  const typeResult = parseResult.ok
+    ? typecheck(path, result.content, input.previousFiles)
+    : { ok: true, errors: [] as string[] };
+
+  const errorParts: string[] = [];
+  if (editFailureMessage) errorParts.push(editFailureMessage);
+  if (!parseResult.ok && parseResult.error)
+    errorParts.push(`Parse error: ${parseResult.error}`);
+  if (!typeResult.ok && typeResult.errors.length > 0)
+    errorParts.push(`Type errors:\n${typeResult.errors.join("\n")}`);
+
+  const verified =
+    result.failures.length === 0 && parseResult.ok && typeResult.ok;
+
+  return {
+    path,
+    content: result.content,
+    verified,
+    verifyError: errorParts.length > 0 ? errorParts.join("\n\n") : null,
+    repaired,
+    strategy: "edits",
   };
 }
 

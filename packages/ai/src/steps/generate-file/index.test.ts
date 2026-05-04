@@ -80,6 +80,7 @@ describe("generateFile", () => {
       verified: true,
       verifyError: null,
       repaired: false,
+      strategy: "full",
     });
     expect(mockCreate).toHaveBeenCalledTimes(1);
   });
