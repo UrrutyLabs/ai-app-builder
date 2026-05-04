@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { createPrFromFeatureAction } from "@/app/_actions/pr";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import type { PrEvent } from "@/lib/pr-events";
+import { PrProgress } from "./pr-progress";
 
 const DEFAULT_SPEC_PATH = "docs/specs";
 const DEFAULT_PLAN_PATH = "docs/plans";
@@ -25,9 +27,8 @@ export function CreatePrForm({
   generatableCreate: number;
   generatableModify: number;
 }) {
+  const router = useRouter();
   const generatableTotal = generatableCreate + generatableModify;
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
   const [specPath, setSpecPath] = useState(
     defaultSpecPath ?? DEFAULT_SPEC_PATH,
   );
@@ -37,23 +38,66 @@ export function CreatePrForm({
   const [fileMode, setFileMode] = useState<FileMode>(
     scaffoldableCount > 0 ? "stubs" : "none",
   );
+  const [events, setEvents] = useState<PrEvent[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
-    startTransition(async () => {
-      const result = await createPrFromFeatureAction({
-        featureId,
-        specPath,
-        planPath,
-        fileMode,
+    setEvents([]);
+    setIsStreaming(true);
+
+    let prOpened = false;
+    try {
+      const res = await fetch("/api/pr/create", {
+        method: "POST",
+        body: JSON.stringify({ featureId, specPath, planPath, fileMode }),
+        headers: { "Content-Type": "application/json" },
       });
-      if (!result.ok) setError(result.error.message);
-    });
+
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+        for (const part of parts) {
+          const trimmed = part.trim();
+          if (!trimmed.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(trimmed.slice(6)) as PrEvent;
+            setEvents((prev) => [...prev, event]);
+            if (event.type === "pr-opened") prOpened = true;
+          } catch {
+            // skip malformed event
+          }
+        }
+      }
+    } catch (err) {
+      setEvents((prev) => [
+        ...prev,
+        {
+          type: "error",
+          code: "NETWORK",
+          message: err instanceof Error ? err.message : String(err),
+        },
+      ]);
+    } finally {
+      setIsStreaming(false);
+      if (prOpened) {
+        // Small delay so the success state is visible before refresh.
+        setTimeout(() => router.refresh(), 800);
+      }
+    }
   };
 
   const inputCls =
-    "w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-mono shadow-sm focus:border-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-950";
+    "w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-mono shadow-sm focus:border-neutral-500 focus:outline-none disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950";
 
   const submittingLabel =
     fileMode === "generate" ? "Generating code & opening PR…" : "Opening PR…";
@@ -71,6 +115,7 @@ export function CreatePrForm({
             onChange={(e) => setSpecPath(e.target.value)}
             placeholder={DEFAULT_SPEC_PATH}
             className={inputCls}
+            disabled={isStreaming}
           />
         </div>
         <div className="space-y-1">
@@ -83,6 +128,7 @@ export function CreatePrForm({
             onChange={(e) => setPlanPath(e.target.value)}
             placeholder={DEFAULT_PLAN_PATH}
             className={inputCls}
+            disabled={isStreaming}
           />
         </div>
       </div>
@@ -92,7 +138,10 @@ export function CreatePrForm({
       </p>
 
       {generatableTotal > 0 ? (
-        <fieldset className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900">
+        <fieldset
+          disabled={isStreaming}
+          className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3 disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-900"
+        >
           <legend className="px-1 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
             Plan touches {generatableTotal} file
             {generatableTotal === 1 ? "" : "s"}
@@ -161,27 +210,29 @@ export function CreatePrForm({
               <span className="block text-xs text-neutral-500 dark:text-neutral-400">
                 AI writes new files and rewrites existing ones using the spec,
                 your repo&apos;s conventions, and retrieved code context. Each
-                file is syntax-checked with one repair attempt on failure.
+                file is parse- and type-checked with one repair attempt on
+                failure.
               </span>
             </span>
           </label>
         </fieldset>
       ) : null}
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isStreaming}
           className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
         >
-          {isPending
+          {isStreaming
             ? submittingLabel
             : hasExistingPr
               ? "Open another PR"
               : "Open PR with spec & plan"}
         </button>
       </div>
+
+      <PrProgress events={events} isStreaming={isStreaming} />
     </form>
   );
 }

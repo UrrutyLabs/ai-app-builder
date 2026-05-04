@@ -1,0 +1,66 @@
+import type { PrEvent } from "@/lib/pr-events";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+// Long-running route — generation can take 30–90s. Bump if your deploy target
+// has a default timeout. Vercel free tier caps at 10s; pro/team is higher.
+export const maxDuration = 300;
+
+export async function POST(req: Request): Promise<Response> {
+  let raw: unknown;
+  try {
+    raw = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Dynamic imports keep env-bound modules out of build-time analysis. Next.js
+  // collects page data for every route at build time; if the route module
+  // imports env at the top level, validation throws when env vars aren't
+  // present in the build worker.
+  const [{ runPrCreation }, { toActionError }] = await Promise.all([
+    import("@/lib/pr-runner"),
+    import("@/lib/action-error"),
+  ]);
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (event: PrEvent): void => {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify(event)}\n\n`),
+        );
+      };
+
+      try {
+        const summary = await runPrCreation(raw, send);
+        send({
+          type: "pr-opened",
+          url: summary.prUrl,
+          number: summary.prNumber,
+          scaffoldedCount: summary.scaffoldedCount,
+          generatedCount: summary.generatedCount,
+          modifiedCount: summary.modifiedCount,
+          unverifiedFiles: summary.unverifiedFiles,
+        });
+      } catch (err) {
+        const e = toActionError(err);
+        send({ type: "error", code: e.code, message: e.message });
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
