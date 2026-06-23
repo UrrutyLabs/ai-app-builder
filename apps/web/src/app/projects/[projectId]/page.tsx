@@ -2,12 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   countRepoEmbeddings,
-  getProjectById,
+  getProjectByIdForUser,
   getRepoByProjectId,
   listFeaturesByProject,
 } from "@repo/db";
+import { getCurrentUser } from "@/lib/auth/server";
 import { RepoPanel } from "@/components/project/repo-panel";
 import { EditProjectForm } from "@/components/project/edit-project-form";
+
+export const dynamic = "force-dynamic";
 
 export default async function ProjectPage({
   params,
@@ -18,7 +21,9 @@ export default async function ProjectPage({
 }) {
   const { projectId } = await params;
   const { edit } = await searchParams;
-  const project = await getProjectById(projectId);
+  const user = await getCurrentUser();
+  if (!user) notFound();
+  const project = await getProjectByIdForUser(projectId, user.id);
   if (!project) notFound();
 
   const editing = edit === "project";

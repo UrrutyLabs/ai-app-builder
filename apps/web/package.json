@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
+    "@neondatabase/auth": "0.4.2-beta",
+    "@neondatabase/auth-ui": "0.2.1-beta",
     "@repo/ai": "workspace:*",
     "@repo/db": "workspace:*",
     "@repo/domain": "workspace:*",

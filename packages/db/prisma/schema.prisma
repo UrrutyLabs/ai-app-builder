@@ -26,6 +26,7 @@ enum FeatureStatus {
 
 model Project {
   id          String    @id @default(cuid())
+  userId      String?
   name        String
   mode        Mode
   description String?
@@ -35,6 +36,8 @@ model Project {
   updatedAt   DateTime  @updatedAt
   features    Feature[]
   repo        Repo?
+
+  @@index([userId])
 }
 
 model Repo {

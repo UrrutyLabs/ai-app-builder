@@ -1,11 +1,33 @@
 import Link from "next/link";
-import { listProjects } from "@repo/db";
+import { countUnclaimedProjects, listProjectsByUserId } from "@repo/db";
+import { getCurrentUser } from "@/lib/auth/server";
+import { ClaimOrphansBanner } from "@/components/auth/claim-orphans-banner";
+
+export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const projects = await listProjects();
+  const user = await getCurrentUser();
+  // Middleware should have redirected unauthenticated requests already.
+  // Defensive null-check: render empty state if somehow we got here.
+  if (!user) {
+    return (
+      <p className="text-sm text-neutral-500">
+        Sign in to see your projects.
+      </p>
+    );
+  }
+
+  const [projects, unclaimedCount] = await Promise.all([
+    listProjectsByUserId(user.id),
+    countUnclaimedProjects(),
+  ]);
 
   return (
     <div className="space-y-8">
+      {unclaimedCount > 0 ? (
+        <ClaimOrphansBanner count={unclaimedCount} />
+      ) : null}
+
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
         <Link

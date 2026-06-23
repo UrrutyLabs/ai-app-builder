@@ -9,6 +9,8 @@ describe("EnvSchema", () => {
     ANTHROPIC_API_KEY: "sk-ant-test",
     OPENAI_API_KEY: "sk-test",
     ENCRYPTION_KEY: validKey,
+    NEON_AUTH_BASE_URL: "https://example.neon.tech/auth",
+    NEON_AUTH_COOKIE_SECRET: validKey, // 44-char base64 is well over 32
   };
 
   it("accepts a valid env with required vars", () => {
@@ -36,6 +38,21 @@ describe("EnvSchema", () => {
   it("rejects when ENCRYPTION_KEY is malformed", () => {
     expect(
       EnvSchema.safeParse({ ...baseValid, ENCRYPTION_KEY: "too-short" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects when NEON_AUTH_BASE_URL is missing", () => {
+    const { NEON_AUTH_BASE_URL: _, ...rest } = baseValid;
+    void _;
+    expect(EnvSchema.safeParse(rest).success).toBe(false);
+  });
+
+  it("rejects when NEON_AUTH_COOKIE_SECRET is shorter than 32 chars", () => {
+    expect(
+      EnvSchema.safeParse({
+        ...baseValid,
+        NEON_AUTH_COOKIE_SECRET: "tooshort",
+      }).success,
     ).toBe(false);
   });
 });

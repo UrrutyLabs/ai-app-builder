@@ -7,7 +7,7 @@ import { NotFoundError } from "@repo/domain";
 import { generateQuestions } from "@repo/ai";
 import {
   getFeatureById,
-  getProjectById,
+  getProjectByIdForUser,
   getRepoByProjectId,
   searchSimilarFiles,
   setFeatureQuestions,
@@ -15,6 +15,7 @@ import {
 } from "@repo/db";
 import { renderSnippets, summarizeConventions, summarizeTree } from "@repo/repos";
 import { embedQuery } from "@repo/repos/server";
+import { requireUser } from "@/lib/auth/server";
 import { toActionError } from "@/lib/action-error";
 
 const InputSchema = z.object({
@@ -27,12 +28,13 @@ export async function generateQuestionsAction(
   raw: unknown,
 ): Promise<ActionResult<FeatureRecord>> {
   try {
+    const user = await requireUser();
     const { featureId } = InputSchema.parse(raw);
 
     const feature = await getFeatureById(featureId);
     if (!feature) throw new NotFoundError(`Feature ${featureId} not found`);
 
-    const project = await getProjectById(feature.projectId);
+    const project = await getProjectByIdForUser(feature.projectId, user.id);
     if (!project) throw new NotFoundError(`Project ${feature.projectId} not found`);
 
     const repo = await getRepoByProjectId(feature.projectId);

@@ -18,21 +18,23 @@ import {
 import {
   deleteRepo,
   getEncryptedTokenForProject,
-  getProjectById,
+  getProjectByIdForUser,
   getRepoByProjectId,
   replaceRepoEmbeddings,
   upsertRepo,
   type RepoRecord,
 } from "@repo/db";
+import { requireUser } from "@/lib/auth/server";
 import { toActionError } from "@/lib/action-error";
 
 export async function connectRepoAction(
   raw: unknown,
 ): Promise<ActionResult<RepoRecord>> {
   try {
+    const user = await requireUser();
     const input = ConnectRepoInputSchema.parse(raw);
 
-    const project = await getProjectById(input.projectId);
+    const project = await getProjectByIdForUser(input.projectId, user.id);
     if (!project) {
       throw new NotFoundError(`Project ${input.projectId} not found`);
     }
@@ -87,7 +89,13 @@ export async function refreshRepoAction(
   raw: unknown,
 ): Promise<ActionResult<RepoRecord>> {
   try {
+    const user = await requireUser();
     const { projectId } = ProjectIdInput.parse(raw);
+
+    const project = await getProjectByIdForUser(projectId, user.id);
+    if (!project) {
+      throw new NotFoundError(`Project ${projectId} not found`);
+    }
 
     const repo = await getRepoByProjectId(projectId);
     if (!repo) {
@@ -142,7 +150,12 @@ export async function disconnectRepoAction(
   raw: unknown,
 ): Promise<ActionResult<{ projectId: string }>> {
   try {
+    const user = await requireUser();
     const { projectId } = ProjectIdInput.parse(raw);
+    const project = await getProjectByIdForUser(projectId, user.id);
+    if (!project) {
+      throw new NotFoundError(`Project ${projectId} not found`);
+    }
     await deleteRepo(projectId);
     revalidatePath(`/projects/${projectId}`);
     return { ok: true, data: { projectId } };

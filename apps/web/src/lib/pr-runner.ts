@@ -21,7 +21,7 @@ import { decryptToken, embedQuery } from "@repo/repos/server";
 import {
   getEncryptedTokenForProject,
   getFeatureById,
-  getProjectById,
+  getProjectByIdForUser,
   getRepoByProjectId,
   searchSimilarFiles,
   setFeaturePr,
@@ -55,6 +55,7 @@ export type OnProgress = (event: PrEvent) => void;
 export async function runPrCreation(
   raw: unknown,
   onProgress: OnProgress,
+  userId: string,
 ): Promise<PrSummary> {
   const input = InputSchema.parse(raw);
   const specDir = normalizeDir(input.specPath);
@@ -78,7 +79,7 @@ export async function runPrCreation(
     );
   }
 
-  const project = await getProjectById(feature.projectId);
+  const project = await getProjectByIdForUser(feature.projectId, userId);
   if (!project) {
     throw new NotFoundError(`Project ${feature.projectId} not found`);
   }

@@ -1,6 +1,10 @@
 import { AppError, LlmError } from "@repo/domain";
+import { UnauthorizedError } from "@/lib/auth/server";
 
 export function toActionError(err: unknown): { code: string; message: string } {
+  if (err instanceof UnauthorizedError) {
+    return { code: err.code, message: err.message };
+  }
   if (err instanceof LlmError) {
     console.error(`[LlmError] ${err.message}`, err.cause ?? "");
     const causeMessage =

@@ -21,10 +21,23 @@ export async function POST(req: Request): Promise<Response> {
   // collects page data for every route at build time; if the route module
   // imports env at the top level, validation throws when env vars aren't
   // present in the build worker.
-  const [{ runPrCreation }, { toActionError }] = await Promise.all([
+  const [{ runPrCreation }, { toActionError }, { requireUser }] = await Promise.all([
     import("@/lib/pr-runner"),
     import("@/lib/action-error"),
+    import("@/lib/auth/server"),
   ]);
+
+  let userId: string;
+  try {
+    const user = await requireUser();
+    userId = user.id;
+  } catch (err) {
+    const e = toActionError(err);
+    return new Response(JSON.stringify({ error: e.message, code: e.code }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -36,7 +49,7 @@ export async function POST(req: Request): Promise<Response> {
       };
 
       try {
-        const summary = await runPrCreation(raw, send);
+        const summary = await runPrCreation(raw, send, userId);
         send({
           type: "pr-opened",
           url: summary.prUrl,

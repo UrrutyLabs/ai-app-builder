@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProjectById } from "@repo/db";
+import { getProjectByIdForUser } from "@repo/db";
+import { getCurrentUser } from "@/lib/auth/server";
 import { NewFeatureForm } from "@/components/forms/new-feature-form";
+
+export const dynamic = "force-dynamic";
 
 export default async function NewFeaturePage({
   params,
@@ -9,7 +12,9 @@ export default async function NewFeaturePage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const project = await getProjectById(projectId);
+  const user = await getCurrentUser();
+  if (!user) notFound();
+  const project = await getProjectByIdForUser(projectId, user.id);
   if (!project) notFound();
 
   return (

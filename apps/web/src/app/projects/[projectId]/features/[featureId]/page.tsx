@@ -3,10 +3,13 @@ import { notFound } from "next/navigation";
 import {
   getEncryptedTokenForProject,
   getFeatureById,
-  getProjectById,
+  getProjectByIdForUser,
   getRepoByProjectId,
 } from "@repo/db";
 import { decryptToken } from "@repo/repos/server";
+import { getCurrentUser } from "@/lib/auth/server";
+
+export const dynamic = "force-dynamic";
 import { fetchPrStatus, type PrStatus } from "@/lib/pr-status";
 import { PrStatusBadge } from "@/components/feature/pr-status-badge";
 import { countGeneratable, countScaffoldable } from "@/lib/scaffold-stubs";
@@ -36,8 +39,10 @@ export default async function FeaturePage({
 }) {
   const { projectId, featureId } = await params;
   const { edit } = await searchParams;
+  const user = await getCurrentUser();
+  if (!user) notFound();
   const [project, feature] = await Promise.all([
-    getProjectById(projectId),
+    getProjectByIdForUser(projectId, user.id),
     getFeatureById(featureId),
   ]);
   if (!project || !feature || feature.projectId !== project.id) notFound();

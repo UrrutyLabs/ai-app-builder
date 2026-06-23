@@ -18,7 +18,7 @@ import { generateSpec } from "@repo/ai";
 import {
   approveFeatureSpec,
   getFeatureById,
-  getProjectById,
+  getProjectByIdForUser,
   getRepoByProjectId,
   searchSimilarFiles,
   setFeatureSpec,
@@ -30,6 +30,7 @@ import {
   summarizeTree,
 } from "@repo/repos";
 import { embedQuery } from "@repo/repos/server";
+import { requireUser } from "@/lib/auth/server";
 import { toActionError } from "@/lib/action-error";
 
 const FeatureIdInput = z.object({
@@ -42,12 +43,13 @@ export async function generateSpecAction(
   raw: unknown,
 ): Promise<ActionResult<FeatureRecord>> {
   try {
+    const user = await requireUser();
     const { featureId } = FeatureIdInput.parse(raw);
 
     const feature = await getFeatureById(featureId);
     if (!feature) throw new NotFoundError(`Feature ${featureId} not found`);
 
-    const project = await getProjectById(feature.projectId);
+    const project = await getProjectByIdForUser(feature.projectId, user.id);
     if (!project) throw new NotFoundError(`Project ${feature.projectId} not found`);
 
     if (!feature.questions || !feature.answers) {
@@ -108,9 +110,12 @@ export async function saveSpecAction(
 ): Promise<ActionResult<FeatureRecord>> {
   let feature: FeatureRecord;
   try {
+    const user = await requireUser();
     const input = SaveSpecInput.parse(raw);
     const existing = await getFeatureById(input.featureId);
     if (!existing) throw new NotFoundError(`Feature ${input.featureId} not found`);
+    const project = await getProjectByIdForUser(existing.projectId, user.id);
+    if (!project) throw new NotFoundError(`Project ${existing.projectId} not found`);
     feature = await setFeatureSpec(input.featureId, input.spec);
     revalidatePath(`/projects/${feature.projectId}/features/${feature.id}`);
   } catch (err) {
@@ -123,9 +128,12 @@ export async function approveSpecAction(
   raw: unknown,
 ): Promise<ActionResult<FeatureRecord>> {
   try {
+    const user = await requireUser();
     const { featureId } = FeatureIdInput.parse(raw);
     const existing = await getFeatureById(featureId);
     if (!existing) throw new NotFoundError(`Feature ${featureId} not found`);
+    const project = await getProjectByIdForUser(existing.projectId, user.id);
+    if (!project) throw new NotFoundError(`Project ${existing.projectId} not found`);
     if (!existing.spec) {
       throw new ConflictError("Cannot approve a feature with no spec");
     }

@@ -8,9 +8,11 @@ import type { ActionResult } from "@repo/domain";
 import { NotFoundError } from "@repo/domain";
 import {
   getFeatureById,
+  getProjectByIdForUser,
   setFeatureAnswers,
   type FeatureRecord,
 } from "@repo/db";
+import { requireUser } from "@/lib/auth/server";
 import { toActionError } from "@/lib/action-error";
 
 const InputSchema = z.object({
@@ -23,9 +25,12 @@ export async function saveAnswersAction(
 ): Promise<ActionResult<FeatureRecord>> {
   let feature: FeatureRecord;
   try {
+    const user = await requireUser();
     const input = InputSchema.parse(raw);
     const existing = await getFeatureById(input.featureId);
     if (!existing) throw new NotFoundError(`Feature ${input.featureId} not found`);
+    const project = await getProjectByIdForUser(existing.projectId, user.id);
+    if (!project) throw new NotFoundError(`Project ${existing.projectId} not found`);
     feature = await setFeatureAnswers(input.featureId, input.answers);
     revalidatePath(`/projects/${feature.projectId}/features/${feature.id}`);
   } catch (err) {

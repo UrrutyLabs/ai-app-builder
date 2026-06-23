@@ -2,11 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   getFeatureById,
-  getProjectById,
+  getProjectByIdForUser,
   listSpecVersionsByFeatureId,
 } from "@repo/db";
+import { getCurrentUser } from "@/lib/auth/server";
 import { diffSpecs } from "@/lib/spec-diff";
 import { SpecDiffView } from "@/components/feature/spec-diff-view";
+
+export const dynamic = "force-dynamic";
 
 export default async function FeatureHistoryPage({
   params,
@@ -14,8 +17,10 @@ export default async function FeatureHistoryPage({
   params: Promise<{ projectId: string; featureId: string }>;
 }) {
   const { projectId, featureId } = await params;
+  const user = await getCurrentUser();
+  if (!user) notFound();
   const [project, feature] = await Promise.all([
-    getProjectById(projectId),
+    getProjectByIdForUser(projectId, user.id),
     getFeatureById(featureId),
   ]);
   if (!project || !feature || feature.projectId !== project.id) notFound();
