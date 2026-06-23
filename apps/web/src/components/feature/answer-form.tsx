@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 import {
   AnswerListSchema,
   type Answer,
   type Question,
 } from "@repo/domain/schemas";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { saveAnswersAction } from "@/app/_actions/answers";
 
 const FormSchema = z.object({
@@ -26,7 +29,6 @@ export function AnswerForm({
   questions: Question[];
   initialAnswers: Answer[];
 }) {
-  const [serverError, setServerError] = useState<string | null>(null);
   const initialMap = new Map(initialAnswers.map((a) => [a.questionId, a.text]));
 
   const {
@@ -44,9 +46,11 @@ export function AnswerForm({
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    setServerError(null);
-    const result = await saveAnswersAction({ featureId, answers: values.answers });
-    if (result && !result.ok) setServerError(result.error.message);
+    const result = await saveAnswersAction({
+      featureId,
+      answers: values.answers,
+    });
+    if (result && !result.ok) toast.error(result.error.message);
   });
 
   return (
@@ -55,28 +59,23 @@ export function AnswerForm({
         {questions.map((q, i) => (
           <li key={q.id} className="space-y-2">
             <div className="flex gap-3">
-              <span className="font-mono text-neutral-400">{i + 1}.</span>
-              <label
-                htmlFor={`answer-${q.id}`}
-                className="text-sm font-medium"
-              >
-                {q.text}
-              </label>
+              <span className="font-mono text-muted-foreground">{i + 1}.</span>
+              <Label htmlFor={`answer-${q.id}`}>{q.text}</Label>
             </div>
             <input
               type="hidden"
               {...register(`answers.${i}.questionId`)}
               value={q.id}
             />
-            <textarea
+            <Textarea
               id={`answer-${q.id}`}
               {...register(`answers.${i}.text`)}
               rows={2}
-              className="ml-6 w-[calc(100%-1.5rem)] rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-950"
+              className="ml-6 w-[calc(100%-1.5rem)]"
               placeholder="Your answer…"
             />
             {errors.answers?.[i]?.text ? (
-              <p className="ml-6 text-sm text-red-600">
+              <p className="ml-6 text-sm text-destructive">
                 {errors.answers[i]?.text?.message}
               </p>
             ) : null}
@@ -84,18 +83,10 @@ export function AnswerForm({
         ))}
       </ol>
 
-      {serverError ? (
-        <p className="text-sm text-red-600">{serverError}</p>
-      ) : null}
-
       <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-        >
+        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Saving…" : "Save answers"}
-        </button>
+        </Button>
       </div>
     </form>
   );

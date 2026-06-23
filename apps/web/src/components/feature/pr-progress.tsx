@@ -26,7 +26,7 @@ function StatusIcon({ state }: { state: RowState }) {
   if (state === "fail")
     return <span className="text-amber-600 dark:text-amber-400">⚠</span>;
   return (
-    <span className="inline-block animate-spin text-neutral-400">◐</span>
+    <span className="inline-block animate-spin text-muted-foreground">◐</span>
   );
 }
 
@@ -100,7 +100,7 @@ export function PrProgress({
   if (events.length === 0 && !isStreaming) return null;
 
   return (
-    <div className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3 text-sm dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="space-y-2 rounded-md border bg-muted/50 p-3 text-sm">
       {steps.map((s, i) => (
         <div key={`step-${i}`} className="flex items-center gap-2">
           <StatusIcon state="done" />
@@ -114,11 +114,11 @@ export function PrProgress({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="font-mono text-xs">{row.path}</span>
-              <span className="text-xs text-neutral-500 dark:text-neutral-400">
+              <span className="text-xs text-muted-foreground">
                 ({row.action})
               </span>
               {row.ms !== undefined ? (
-                <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                <span className="text-xs text-muted-foreground">
                   · {formatMs(row.ms)}
                 </span>
               ) : null}
@@ -171,7 +171,7 @@ export function PrProgress({
               href={prUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline hover:text-neutral-900 dark:hover:text-neutral-100"
+              className="underline transition-colors hover:text-foreground"
             >
               {prUrl}
             </a>
@@ -205,7 +205,7 @@ export function PrProgress({
       {errorMsg ? (
         <div className="flex items-start gap-2">
           <StatusIcon state="fail" />
-          <span className="text-red-600">{errorMsg}</span>
+          <span className="text-destructive">{errorMsg}</span>
         </div>
       ) : null}
     </div>

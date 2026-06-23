@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Plus } from "lucide-react";
 import {
   countRepoEmbeddings,
   getProjectByIdForUser,
@@ -11,6 +12,8 @@ import { getCurrentUser } from "@/lib/auth/server";
 import { RepoPanel } from "@/components/project/repo-panel";
 import { EditProjectForm } from "@/components/project/edit-project-form";
 import { ContextDocsSection } from "@/components/project/context-docs-section";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +48,7 @@ export default async function ProjectPage({
       <div>
         <Link
           href="/"
-          className="text-sm text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           ← All projects
         </Link>
@@ -53,7 +56,7 @@ export default async function ProjectPage({
 
       {editing ? (
         <div className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Edit project
           </h2>
           <EditProjectForm project={project} />
@@ -67,32 +70,31 @@ export default async function ProjectPage({
               </h1>
               <Link
                 href={`/projects/${project.id}?edit=project`}
-                className="text-sm text-neutral-500 underline hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                className="text-sm text-muted-foreground underline transition-colors hover:text-foreground"
               >
                 Edit
               </Link>
             </div>
             {project.description ? (
-              <p className="text-neutral-500 dark:text-neutral-400">
-                {project.description}
-              </p>
+              <p className="text-muted-foreground">{project.description}</p>
             ) : null}
-            <span className="inline-block rounded-full border border-neutral-300 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+            <Badge variant="secondary">
               {project.mode === "greenfield" ? "Greenfield" : "Existing system"}
-            </span>
+            </Badge>
           </div>
           <Link
             href={`/projects/${project.id}/features/new`}
-            className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+            className={buttonVariants()}
           >
-            + New feature
+            <Plus className="size-4" aria-hidden="true" />
+            New feature
           </Link>
         </div>
       )}
 
       {project.mode === "existing_system" ? (
         <div className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Connected repo
           </h2>
           <RepoPanel
@@ -108,26 +110,26 @@ export default async function ProjectPage({
       <div className="space-y-3">
         <h2 className="text-lg font-medium">Features</h2>
         {features.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-neutral-300 p-10 text-center text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+          <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
             No features yet. Create the first one.
           </div>
         ) : (
-          <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+          <ul className="divide-y rounded-lg border">
             {features.map((f) => (
               <li key={f.id}>
                 <Link
                   href={`/projects/${project.id}/features/${f.id}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-neutral-50 dark:hover:bg-neutral-900"
+                  className="flex items-center justify-between px-4 py-3 transition-colors hover:bg-muted/50"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-medium">{f.title}</div>
-                    <div className="line-clamp-1 text-sm text-neutral-500 dark:text-neutral-400">
+                    <div className="line-clamp-1 text-sm text-muted-foreground">
                       {f.idea}
                     </div>
                   </div>
-                  <span className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+                  <Badge variant="outline" className="shrink-0">
                     {f.status.replace(/_/g, " ").toLowerCase()}
-                  </span>
+                  </Badge>
                 </Link>
               </li>
             ))}

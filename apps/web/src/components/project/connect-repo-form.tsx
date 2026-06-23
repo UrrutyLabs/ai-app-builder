@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
 import {
   ConnectRepoInputSchema,
   type ConnectRepoInput,
 } from "@repo/domain/schemas";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { connectRepoAction } from "@/app/_actions/repo";
 
 export function ConnectRepoForm({ projectId }: { projectId: string }) {
-  const [serverError, setServerError] = useState<string | null>(null);
-
   const {
     register,
     handleSubmit,
@@ -22,69 +23,55 @@ export function ConnectRepoForm({ projectId }: { projectId: string }) {
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    setServerError(null);
     const result = await connectRepoAction(values);
-    if (result && !result.ok) setServerError(result.error.message);
+    if (result && !result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Repo connected and indexed");
   });
-
-  const inputCls =
-    "w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-950";
 
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 rounded-lg border border-dashed border-neutral-300 p-4 dark:border-neutral-700"
+      className="space-y-4 rounded-lg border border-dashed p-4"
     >
       <input type="hidden" {...register("projectId")} />
 
       <div className="space-y-2">
-        <label htmlFor="repoUrl" className="text-sm font-medium">
-          GitHub repo URL
-        </label>
-        <input
+        <Label htmlFor="repoUrl">GitHub repo URL</Label>
+        <Input
           id="repoUrl"
           {...register("repoUrl")}
           placeholder="https://github.com/owner/repo"
-          className={inputCls}
         />
         {errors.repoUrl ? (
-          <p className="text-sm text-red-600">{errors.repoUrl.message}</p>
+          <p className="text-sm text-destructive">{errors.repoUrl.message}</p>
         ) : null}
       </div>
 
       <div className="space-y-2">
-        <label htmlFor="pat" className="text-sm font-medium">
-          Personal access token
-        </label>
-        <input
+        <Label htmlFor="pat">Personal access token</Label>
+        <Input
           id="pat"
           type="password"
           {...register("pat")}
           placeholder="ghp_..."
-          className={inputCls}
           autoComplete="off"
         />
-        <p className="text-xs text-neutral-500 dark:text-neutral-400">
+        <p className="text-xs text-muted-foreground">
           Create a PAT with <code>repo</code> scope (or <code>public_repo</code>{" "}
           for public repos). Stored encrypted at rest.
         </p>
         {errors.pat ? (
-          <p className="text-sm text-red-600">{errors.pat.message}</p>
+          <p className="text-sm text-destructive">{errors.pat.message}</p>
         ) : null}
       </div>
 
-      {serverError ? (
-        <p className="text-sm text-red-600">{serverError}</p>
-      ) : null}
-
       <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-        >
+        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Connecting…" : "Connect repo"}
-        </button>
+        </Button>
       </div>
     </form>
   );

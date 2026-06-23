@@ -22,7 +22,7 @@ export default async function NewFeaturePage({
       <div>
         <Link
           href={`/projects/${project.id}`}
-          className="text-sm text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           ← Back to {project.name}
         </Link>

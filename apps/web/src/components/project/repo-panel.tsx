@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
+import { toast } from "sonner";
 import type { RepoRecord } from "@repo/db";
 import { shortStackLabel } from "@repo/repos";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   disconnectRepoAction,
   refreshRepoAction,
@@ -29,14 +32,16 @@ export function RepoPanel({
   repo: RepoRecord | null;
   embeddingCount: number;
 }) {
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleRefresh = () => {
-    setError(null);
     startTransition(async () => {
       const result = await refreshRepoAction({ projectId });
-      if (!result.ok) setError(result.error.message);
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success("Repo refreshed");
     });
   };
 
@@ -47,10 +52,13 @@ export function RepoPanel({
       )
     )
       return;
-    setError(null);
     startTransition(async () => {
       const result = await disconnectRepoAction({ projectId });
-      if (!result.ok) setError(result.error.message);
+      if (!result.ok) {
+        toast.error(result.error.message);
+        return;
+      }
+      toast.success("Repo disconnected");
     });
   };
 
@@ -63,22 +71,17 @@ export function RepoPanel({
   const truncated = repo.fileTree?.truncated ?? false;
   const stackLabel = repo.conventions ? shortStackLabel(repo.conventions) : "";
 
-  const btnCls =
-    "rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900";
-
   return (
-    <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+    <div className="space-y-3 rounded-lg border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <span className="font-medium">
               {repo.owner}/{repo.repo}
             </span>
-            <span className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
-              {repo.defaultBranch}
-            </span>
+            <Badge variant="outline">{repo.defaultBranch}</Badge>
           </div>
-          <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+          <div className="mt-1 text-xs text-muted-foreground">
             {fileCount} file{fileCount === 1 ? "" : "s"} in tree
             {truncated ? " (truncated at 5000)" : ""}
             {embeddingCount > 0
@@ -89,34 +92,33 @@ export function RepoPanel({
               : ""}
           </div>
           {stackLabel ? (
-            <div className="mt-1 text-xs text-neutral-600 dark:text-neutral-300">
-              <span className="text-neutral-400 dark:text-neutral-500">
-                Detected:
-              </span>{" "}
+            <div className="mt-1 text-xs text-foreground/80">
+              <span className="text-muted-foreground">Detected:</span>{" "}
               {stackLabel}
             </div>
           ) : null}
         </div>
         <div className="flex shrink-0 gap-2">
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={handleRefresh}
             disabled={isPending}
-            className={btnCls}
           >
             {isPending ? "Working…" : "Refresh"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="outline"
+            size="sm"
             onClick={handleDisconnect}
             disabled={isPending}
-            className={btnCls}
           >
             Disconnect
-          </button>
+          </Button>
         </div>
       </div>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
     </div>
   );
 }

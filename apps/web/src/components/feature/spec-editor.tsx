@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { toast } from "sonner";
 import type { FeatureSpec } from "@repo/domain/schemas";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { saveSpecAction } from "@/app/_actions/spec";
 
 const FormSchema = z.object({
@@ -75,9 +78,6 @@ function formValuesToSpec(v: FormValues): FeatureSpec {
   };
 }
 
-const inputCls =
-  "w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-950";
-
 function Field({
   label,
   hint,
@@ -91,14 +91,14 @@ function Field({
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </label>
       {hint ? (
-        <p className="text-xs text-neutral-400 dark:text-neutral-500">{hint}</p>
+        <p className="text-xs text-muted-foreground/70">{hint}</p>
       ) : null}
       {children}
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -112,8 +112,6 @@ export function SpecEditor({
   projectId: string;
   spec: FeatureSpec;
 }) {
-  const [serverError, setServerError] = useState<string | null>(null);
-
   const {
     register,
     handleSubmit,
@@ -124,12 +122,11 @@ export function SpecEditor({
   });
 
   const onSubmit = handleSubmit(async (values) => {
-    setServerError(null);
     const result = await saveSpecAction({
       featureId,
       spec: formValuesToSpec(values),
     });
-    if (result && !result.ok) setServerError(result.error.message);
+    if (result && !result.ok) toast.error(result.error.message);
   });
 
   const linesHint = "One item per line. Empty lines are ignored.";
@@ -137,10 +134,10 @@ export function SpecEditor({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-6 rounded-lg border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-950"
+      className="space-y-6 rounded-lg border bg-card p-6"
     >
       <Field label="Title" error={errors.title?.message}>
-        <input {...register("title")} className={inputCls} />
+        <Input {...register("title")} />
       </Field>
 
       <Field label="Mode">
@@ -161,85 +158,73 @@ export function SpecEditor({
       </Field>
 
       <Field label="Problem" error={errors.problem?.message}>
-        <textarea {...register("problem")} rows={3} className={inputCls} />
+        <Textarea {...register("problem")} rows={3} />
       </Field>
 
       <Field label="Goal" error={errors.goal?.message}>
-        <textarea {...register("goal")} rows={3} className={inputCls} />
+        <Textarea {...register("goal")} rows={3} />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="In scope" hint={linesHint}>
-          <textarea {...register("scopeIn")} rows={4} className={inputCls} />
+          <Textarea {...register("scopeIn")} rows={4} />
         </Field>
         <Field label="Out of scope" hint={linesHint}>
-          <textarea {...register("scopeOut")} rows={4} className={inputCls} />
+          <Textarea {...register("scopeOut")} rows={4} />
         </Field>
       </div>
 
       <Field label="Actors" hint={linesHint}>
-        <textarea {...register("actors")} rows={3} className={inputCls} />
+        <Textarea {...register("actors")} rows={3} />
       </Field>
 
       <Field label="User flows" hint={linesHint}>
-        <textarea {...register("userFlows")} rows={4} className={inputCls} />
+        <Textarea {...register("userFlows")} rows={4} />
       </Field>
 
       <Field label="UI states" hint={linesHint}>
-        <textarea {...register("uiStates")} rows={4} className={inputCls} />
+        <Textarea {...register("uiStates")} rows={4} />
       </Field>
 
       <Field label="Business rules" hint={linesHint}>
-        <textarea {...register("businessRules")} rows={4} className={inputCls} />
+        <Textarea {...register("businessRules")} rows={4} />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Data changes" hint={linesHint}>
-          <textarea {...register("dataChanges")} rows={4} className={inputCls} />
+          <Textarea {...register("dataChanges")} rows={4} />
         </Field>
         <Field label="API changes" hint={linesHint}>
-          <textarea {...register("apiChanges")} rows={4} className={inputCls} />
+          <Textarea {...register("apiChanges")} rows={4} />
         </Field>
       </div>
 
       <Field label="Acceptance criteria" hint={linesHint}>
-        <textarea
-          {...register("acceptanceCriteria")}
-          rows={5}
-          className={inputCls}
-        />
+        <Textarea {...register("acceptanceCriteria")} rows={5} />
       </Field>
 
       <Field label="Assumptions" hint={linesHint}>
-        <textarea {...register("assumptions")} rows={3} className={inputCls} />
+        <Textarea {...register("assumptions")} rows={3} />
       </Field>
 
       <Field label="Open questions" hint={linesHint}>
-        <textarea {...register("openQuestions")} rows={3} className={inputCls} />
+        <Textarea {...register("openQuestions")} rows={3} />
       </Field>
 
-      {serverError ? (
-        <p className="text-sm text-red-600">{serverError}</p>
-      ) : null}
-
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+      <p className="text-xs text-muted-foreground">
         Saving the spec resets approval and clears any implementation plan.
       </p>
 
       <div className="flex justify-end gap-3">
         <Link
           href={`/projects/${projectId}/features/${featureId}`}
-          className="rounded-md border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900"
+          className={buttonVariants({ variant: "outline" })}
         >
           Cancel
         </Link>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-        >
+        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Saving…" : "Save spec"}
-        </button>
+        </Button>
       </div>
     </form>
   );

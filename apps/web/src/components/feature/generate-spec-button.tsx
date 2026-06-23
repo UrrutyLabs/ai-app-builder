@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import type { SpecEvent } from "@/lib/spec-events";
 
 export function GenerateSpecButton({
@@ -12,13 +14,11 @@ export function GenerateSpecButton({
   hasSpec: boolean;
 }) {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [snapshot, setSnapshot] = useState<unknown>(null);
   const previewRef = useRef<HTMLPreElement | null>(null);
 
   const startStream = async () => {
-    setError(null);
     setSnapshot(null);
     setIsStreaming(true);
 
@@ -58,6 +58,7 @@ export function GenerateSpecButton({
           } else if (event.type === "complete") {
             setSnapshot(null);
             setIsStreaming(false);
+            toast.success("Spec generated");
             router.refresh();
             return;
           } else {
@@ -70,33 +71,27 @@ export function GenerateSpecButton({
     } catch (err) {
       setIsStreaming(false);
       setSnapshot(null);
-      setError(err instanceof Error ? err.message : "Unknown error");
+      toast.error(err instanceof Error ? err.message : "Unknown error");
     }
   };
 
   return (
     <div className="space-y-3">
-      <button
-        type="button"
-        disabled={isStreaming}
-        onClick={startStream}
-        className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-      >
+      <Button type="button" disabled={isStreaming} onClick={startStream}>
         {isStreaming
           ? "Generating spec…"
           : hasSpec
             ? "Regenerate spec"
             : "Generate feature spec"}
-      </button>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      </Button>
       {isStreaming && snapshot !== null ? (
         <div className="space-y-1">
-          <div className="text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">
             Live preview
           </div>
           <pre
             ref={previewRef}
-            className="max-h-80 overflow-auto rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-xs leading-relaxed text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300"
+            className="max-h-80 overflow-auto rounded-lg border bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground"
           >
             {JSON.stringify(snapshot, null, 2)}
           </pre>

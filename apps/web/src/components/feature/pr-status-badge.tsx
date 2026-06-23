@@ -15,7 +15,7 @@ function formatRelative(iso: string): string {
 export function PrStatusBadge({ status }: { status: PrStatus | null }) {
   if (!status) {
     return (
-      <span className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+      <span className="rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">
         status unknown
       </span>
     );
@@ -29,7 +29,7 @@ export function PrStatusBadge({ status }: { status: PrStatus | null }) {
   }
   if (status.state === "closed") {
     return (
-      <span className="rounded-full border border-neutral-300 bg-neutral-100 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400">
+      <span className="rounded-full border bg-muted px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">
         ✗ Closed
         {status.closedAt ? ` ${formatRelative(status.closedAt)}` : ""}
       </span>

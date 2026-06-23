@@ -9,7 +9,7 @@ function Section({
 }) {
   return (
     <div className="space-y-1">
-      <h3 className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {title}
       </h3>
       <div className="text-sm">{children}</div>
@@ -20,7 +20,7 @@ function Section({
 function BulletList({ items }: { items: string[] }) {
   if (items.length === 0) {
     return (
-      <p className="italic text-neutral-400 dark:text-neutral-600">none</p>
+      <p className="italic text-muted-foreground dark:text-muted-foreground">none</p>
     );
   }
   return (
@@ -34,10 +34,10 @@ function BulletList({ items }: { items: string[] }) {
 
 export function SpecView({ spec }: { spec: FeatureSpec }) {
   return (
-    <div className="space-y-6 rounded-lg border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-950">
+    <div className="space-y-6 rounded-lg border bg-card p-6">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold tracking-tight">{spec.title}</h2>
-        <span className="inline-block rounded-full border border-neutral-300 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+        <span className="inline-block rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">
           {spec.mode === "greenfield" ? "Greenfield" : "Existing system"}
         </span>
       </div>

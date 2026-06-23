@@ -31,6 +31,8 @@ import { ExportButtons } from "@/components/feature/export-buttons";
 import { CreatePrForm } from "@/components/feature/create-pr-form";
 import { TranscriptContextView } from "@/components/feature/transcript-context-view";
 import { parseTranscriptContext } from "@/lib/transcript-context";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 
 export default async function FeaturePage({
   params,
@@ -111,7 +113,7 @@ export default async function FeaturePage({
       <div>
         <Link
           href={`/projects/${project.id}`}
-          className="text-sm text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           ← {project.name}
         </Link>
@@ -121,26 +123,26 @@ export default async function FeaturePage({
         <h1 className="text-2xl font-semibold tracking-tight">
           {feature.title}
         </h1>
-        <span className="inline-block rounded-full border border-neutral-300 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+        <Badge variant="outline">
           {feature.status.replace(/_/g, " ").toLowerCase()}
-        </span>
+        </Badge>
       </div>
 
       <section className="space-y-2">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
           Idea
         </h2>
-        <p className="whitespace-pre-wrap rounded-lg border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-950">
+        <p className="whitespace-pre-wrap rounded-lg border bg-card p-4 text-sm">
           {feature.idea}
         </p>
       </section>
 
       {transcriptContext ? (
         <section className="space-y-2">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             From the transcript
           </h2>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+          <p className="text-xs text-muted-foreground">
             Distilled from the refinement transcript. Review before generating
             questions — this context is fed into every downstream step.
           </p>
@@ -149,13 +151,13 @@ export default async function FeaturePage({
       ) : null}
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+        <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
           Clarifying questions
         </h2>
 
         {!hasQuestions ? (
           <>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+            <p className="text-sm text-muted-foreground">
               No questions yet — generate them below.
             </p>
             <GenerateQuestionsButton
@@ -170,7 +172,7 @@ export default async function FeaturePage({
               questions={questions}
               initialAnswers={answers ?? []}
             />
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            <p className="text-xs text-muted-foreground">
               Regenerating questions will clear your answers.
             </p>
             <GenerateQuestionsButton featureId={feature.id} hasQuestions />
@@ -179,17 +181,17 @@ export default async function FeaturePage({
 
         {showAnsweredView ? (
           <>
-            <ol className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4 text-sm dark:border-neutral-800 dark:bg-neutral-950">
+            <ol className="space-y-4 rounded-lg border bg-card p-4 text-sm">
               {questions.map((q, i) => {
                 const a = answers.find((x) => x.questionId === q.id);
                 return (
                   <li key={q.id} className="space-y-1">
                     <div className="flex gap-3">
-                      <span className="font-mono text-neutral-400">{i + 1}.</span>
+                      <span className="font-mono text-muted-foreground">{i + 1}.</span>
                       <span className="font-medium">{q.text}</span>
                     </div>
-                    <p className="ml-6 whitespace-pre-wrap text-neutral-700 dark:text-neutral-300">
-                      {a ? a.text : <span className="italic text-neutral-400">no answer</span>}
+                    <p className="ml-6 whitespace-pre-wrap text-foreground/80">
+                      {a ? a.text : <span className="italic text-muted-foreground">no answer</span>}
                     </p>
                   </li>
                 );
@@ -198,11 +200,11 @@ export default async function FeaturePage({
             <div className="flex items-center gap-3">
               <Link
                 href={`/projects/${project.id}/features/${feature.id}?edit=answers`}
-                className="text-sm text-neutral-600 underline hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+                className="text-sm text-muted-foreground underline transition-colors hover:text-foreground"
               >
                 Edit answers
               </Link>
-              <span className="text-neutral-300 dark:text-neutral-700">·</span>
+              <span className="text-muted-foreground/40">·</span>
               <GenerateQuestionsButton featureId={feature.id} hasQuestions />
             </div>
           </>
@@ -211,7 +213,7 @@ export default async function FeaturePage({
 
       {hasAnswers && !editingAnswers ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Feature spec
           </h2>
 
@@ -241,7 +243,7 @@ export default async function FeaturePage({
                 {hasSpec ? (
                   <Link
                     href={`/projects/${project.id}/features/${feature.id}?edit=spec`}
-                    className="rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                    className={buttonVariants({ variant: "outline" })}
                   >
                     Edit spec
                   </Link>
@@ -250,7 +252,7 @@ export default async function FeaturePage({
                 {hasSpec ? (
                   <Link
                     href={`/projects/${project.id}/features/${feature.id}/history`}
-                    className="rounded-md border border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                    className={buttonVariants({ variant: "outline" })}
                   >
                     History
                   </Link>
@@ -262,7 +264,7 @@ export default async function FeaturePage({
               </div>
 
               {hasSpec ? (
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                <p className="text-xs text-muted-foreground">
                   Regenerating or editing the spec will clear approval and any implementation plan.
                 </p>
               ) : null}
@@ -273,13 +275,13 @@ export default async function FeaturePage({
 
       {isApproved && !editingSpec ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Implementation plan
           </h2>
           {hasPlan ? <PlanView plan={plan} /> : null}
           <GeneratePlanButton featureId={feature.id} hasPlan={hasPlan} />
           {hasPlan ? (
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            <p className="text-xs text-muted-foreground">
               Regenerating the plan will overwrite the current one.
             </p>
           ) : null}
@@ -288,7 +290,7 @@ export default async function FeaturePage({
 
       {hasPlan && project.mode === "existing_system" && !editingSpec ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Pull request
           </h2>
           {feature.prUrl ? (
@@ -299,13 +301,13 @@ export default async function FeaturePage({
                   href={feature.prUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="underline hover:text-neutral-900 dark:hover:text-neutral-100"
+                  className="underline transition-colors hover:text-foreground"
                 >
                   {feature.prUrl}
                 </a>
               </div>
               {feature.prCreatedAt ? (
-                <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                <div className="text-xs text-muted-foreground">
                   Opened{" "}
                   {feature.prCreatedAt.toLocaleString(undefined, {
                     dateStyle: "medium",
@@ -328,12 +330,12 @@ export default async function FeaturePage({
       ) : null}
 
       {!editingSpec && !editingAnswers ? (
-        <section className="space-y-3 border-t border-neutral-200 pt-6 dark:border-neutral-800">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+        <section className="space-y-3 border-t pt-6">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
             Export
           </h2>
           <ExportButtons featureId={feature.id} />
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+          <p className="text-xs text-muted-foreground">
             Includes the idea, Q&amp;A, spec, and plan as currently saved.
           </p>
         </section>

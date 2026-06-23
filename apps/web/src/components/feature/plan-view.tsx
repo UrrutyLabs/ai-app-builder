@@ -28,7 +28,7 @@ function Section({
 }) {
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+      <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {title}
       </h3>
       <div className="text-sm">{children}</div>
@@ -52,7 +52,7 @@ export function PlanView({ plan }: { plan: ImplementationPlan }) {
   const grouped = groupStepsByArea(plan.steps);
 
   return (
-    <div className="space-y-6 rounded-lg border border-neutral-200 bg-white p-6 dark:border-neutral-800 dark:bg-neutral-950">
+    <div className="space-y-6 rounded-lg border bg-card p-6">
       <Section title="Summary">
         <p className="whitespace-pre-wrap">{plan.summary}</p>
       </Section>
@@ -62,7 +62,7 @@ export function PlanView({ plan }: { plan: ImplementationPlan }) {
           {plan.affectedAreas.map((area) => (
             <span
               key={area}
-              className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-600 dark:border-neutral-700 dark:text-neutral-400"
+              className="rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground"
             >
               {AREA_LABEL[area]}
             </span>
@@ -72,13 +72,13 @@ export function PlanView({ plan }: { plan: ImplementationPlan }) {
 
       <Section title="File changes">
         {plan.fileChanges.length === 0 ? (
-          <p className="italic text-neutral-400 dark:text-neutral-600">none</p>
+          <p className="italic text-muted-foreground dark:text-muted-foreground">none</p>
         ) : (
           <ul className="space-y-2">
             {plan.fileChanges.map((fc, i) => (
               <li
                 key={i}
-                className="flex items-start gap-3 rounded-md border border-neutral-200 px-3 py-2 dark:border-neutral-800"
+                className="flex items-start gap-3 rounded-md border px-3 py-2"
               >
                 <span
                   className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-xs uppercase ${ACTION_BADGE[fc.action]}`}
@@ -86,10 +86,10 @@ export function PlanView({ plan }: { plan: ImplementationPlan }) {
                   {fc.action}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="font-mono text-xs text-neutral-700 dark:text-neutral-300">
+                  <div className="font-mono text-xs text-foreground/80">
                     {fc.path}
                   </div>
-                  <div className="text-sm text-neutral-600 dark:text-neutral-400">
+                  <div className="text-sm text-muted-foreground">
                     {fc.summary}
                   </div>
                 </div>
@@ -103,14 +103,14 @@ export function PlanView({ plan }: { plan: ImplementationPlan }) {
         <div className="space-y-5">
           {grouped.map(({ area, steps }) => (
             <div key={area} className="space-y-2">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-neutral-700 dark:text-neutral-300">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-foreground/80">
                 {AREA_LABEL[area]}
               </h4>
               <ol className="space-y-2 ml-4 list-decimal">
                 {steps.map((s, i) => (
                   <li key={`${area}-${i}`}>
                     <div className="font-medium">{s.title}</div>
-                    <div className="text-neutral-600 dark:text-neutral-400">
+                    <div className="text-muted-foreground">
                       {s.description}
                     </div>
                   </li>
@@ -134,11 +134,11 @@ export function PlanView({ plan }: { plan: ImplementationPlan }) {
           {plan.risks.map((r, i) => (
             <li
               key={i}
-              className="rounded-md border border-neutral-200 p-3 dark:border-neutral-800"
+              className="rounded-md border p-3"
             >
               <div className="font-medium">{r.description}</div>
-              <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
-                <span className="font-medium text-neutral-500 dark:text-neutral-400">
+              <div className="mt-1 text-sm text-muted-foreground">
+                <span className="font-medium text-muted-foreground">
                   Mitigation:
                 </span>{" "}
                 {r.mitigation}

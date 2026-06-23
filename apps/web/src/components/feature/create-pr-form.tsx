@@ -2,6 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { PrEvent } from "@/lib/pr-events";
 import { PrProgress } from "./pr-progress";
 
@@ -96,9 +99,6 @@ export function CreatePrForm({
     }
   };
 
-  const inputCls =
-    "w-full rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-sm font-mono shadow-sm focus:border-neutral-500 focus:outline-none disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-950";
-
   const submittingLabel =
     fileMode === "generate" ? "Generating code & opening PR…" : "Opening PR…";
 
@@ -106,33 +106,29 @@ export function CreatePrForm({
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <label htmlFor="specPath" className="text-xs font-medium">
-            Spec directory
-          </label>
-          <input
+          <Label htmlFor="specPath">Spec directory</Label>
+          <Input
             id="specPath"
             value={specPath}
             onChange={(e) => setSpecPath(e.target.value)}
             placeholder={DEFAULT_SPEC_PATH}
-            className={inputCls}
+            className="font-mono"
             disabled={isStreaming}
           />
         </div>
         <div className="space-y-1">
-          <label htmlFor="planPath" className="text-xs font-medium">
-            Plan directory
-          </label>
-          <input
+          <Label htmlFor="planPath">Plan directory</Label>
+          <Input
             id="planPath"
             value={planPath}
             onChange={(e) => setPlanPath(e.target.value)}
             placeholder={DEFAULT_PLAN_PATH}
-            className={inputCls}
+            className="font-mono"
             disabled={isStreaming}
           />
         </div>
       </div>
-      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+      <p className="text-xs text-muted-foreground">
         Spec and plan land at <code>{specPath}/&lt;slug&gt;.md</code> and{" "}
         <code>{planPath}/&lt;slug&gt;.md</code> on a new branch.
       </p>
@@ -140,9 +136,9 @@ export function CreatePrForm({
       {generatableTotal > 0 ? (
         <fieldset
           disabled={isStreaming}
-          className="space-y-2 rounded-md border border-neutral-200 bg-neutral-50 p-3 disabled:opacity-60 dark:border-neutral-800 dark:bg-neutral-900"
+          className="space-y-2 rounded-md border bg-muted/50 p-3 disabled:opacity-60"
         >
-          <legend className="px-1 text-xs font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <legend className="px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Plan touches {generatableTotal} file
             {generatableTotal === 1 ? "" : "s"}
             {generatableModify > 0
@@ -160,7 +156,7 @@ export function CreatePrForm({
             />
             <span>
               <span className="font-medium">Skip code files</span>
-              <span className="block text-xs text-neutral-500 dark:text-neutral-400">
+              <span className="block text-xs text-muted-foreground">
                 Only commit the spec and plan markdown files.
               </span>
             </span>
@@ -180,7 +176,7 @@ export function CreatePrForm({
                   Scaffold {scaffoldableCount} empty stub
                   {scaffoldableCount === 1 ? "" : "s"}
                 </span>
-                <span className="block text-xs text-neutral-500 dark:text-neutral-400">
+                <span className="block text-xs text-muted-foreground">
                   Each new file gets a TODO header in the right comment syntax.
                   Fast, free. Modify actions are skipped in this mode.
                 </span>
@@ -201,13 +197,13 @@ export function CreatePrForm({
                 Generate {generatableTotal} file
                 {generatableTotal === 1 ? "" : "s"}
               </span>{" "}
-              <span className="text-neutral-500 dark:text-neutral-400">
+              <span className="text-muted-foreground">
                 (~${(0.04 * generatableTotal).toFixed(2)}–$
                 {(0.1 * generatableTotal).toFixed(2)},{" "}
                 {Math.round(generatableTotal * 5)}–
                 {Math.round(generatableTotal * 12)}s)
               </span>
-              <span className="block text-xs text-neutral-500 dark:text-neutral-400">
+              <span className="block text-xs text-muted-foreground">
                 AI writes new files and rewrites existing ones using the spec,
                 your repo&apos;s conventions, and retrieved code context. Each
                 file is parse- and type-checked with one repair attempt on
@@ -219,17 +215,13 @@ export function CreatePrForm({
       ) : null}
 
       <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={isStreaming}
-          className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-700 disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-        >
+        <Button type="submit" disabled={isStreaming}>
           {isStreaming
             ? submittingLabel
             : hasExistingPr
               ? "Open another PR"
               : "Open PR with spec & plan"}
-        </button>
+        </Button>
       </div>
 
       <PrProgress events={events} isStreaming={isStreaming} />

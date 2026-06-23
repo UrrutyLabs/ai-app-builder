@@ -3,19 +3,19 @@ import type { DiffLine } from "@/lib/spec-diff";
 export function SpecDiffView({ lines }: { lines: DiffLine[] }) {
   if (lines.length === 0) {
     return (
-      <p className="text-sm italic text-neutral-500 dark:text-neutral-400">
+      <p className="text-sm italic text-muted-foreground">
         No changes from the previous version.
       </p>
     );
   }
   return (
-    <pre className="overflow-x-auto rounded-md border border-neutral-200 bg-white p-3 font-mono text-xs leading-relaxed dark:border-neutral-800 dark:bg-neutral-950">
+    <pre className="overflow-x-auto rounded-md border bg-card p-3 font-mono text-xs leading-relaxed">
       {lines.map((line, i) => {
         if (line.type === "header") {
           return (
             <div
               key={i}
-              className="border-y border-neutral-200 bg-neutral-100 px-2 text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400"
+              className="border-y border-border bg-muted px-2 text-muted-foreground"
             >
               {line.text}
             </div>
@@ -50,9 +50,9 @@ export function SpecDiffView({ lines }: { lines: DiffLine[] }) {
         return (
           <div
             key={i}
-            className="px-2 text-neutral-700 dark:text-neutral-300"
+            className="px-2 text-foreground/80"
           >
-            <span className="select-none text-neutral-400"> </span>
+            <span className="select-none text-muted-foreground"> </span>
             {line.text || " "}
           </div>
         );

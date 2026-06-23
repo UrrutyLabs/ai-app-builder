@@ -32,7 +32,7 @@ export default async function FeatureHistoryPage({
       <div>
         <Link
           href={`/projects/${project.id}/features/${feature.id}`}
-          className="text-sm text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           ← {feature.title}
         </Link>
@@ -42,14 +42,14 @@ export default async function FeatureHistoryPage({
         <h1 className="text-2xl font-semibold tracking-tight">
           Spec history
         </h1>
-        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+        <p className="text-sm text-muted-foreground">
           {versions.length} version{versions.length === 1 ? "" : "s"} —
           newest first. Each diff is against the version before it.
         </p>
       </div>
 
       {versions.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-neutral-300 p-10 text-center text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+        <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
           No spec versions yet. Generate a spec to start the history.
         </div>
       ) : (
@@ -71,14 +71,14 @@ export default async function FeatureHistoryPage({
                   <h2 className="text-sm font-medium">
                     {idx === 0 ? "Current" : `Version ${versions.length - idx}`}
                   </h2>
-                  <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                  <span className="text-xs text-muted-foreground">
                     {v.createdAt.toLocaleString(undefined, {
                       dateStyle: "medium",
                       timeStyle: "short",
                     })}
                   </span>
                   {isFirst ? (
-                    <span className="rounded-full border border-neutral-300 px-2 py-0.5 text-xs uppercase tracking-wide text-neutral-500 dark:border-neutral-700 dark:text-neutral-400">
+                    <span className="rounded-full border px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">
                       initial
                     </span>
                   ) : null}

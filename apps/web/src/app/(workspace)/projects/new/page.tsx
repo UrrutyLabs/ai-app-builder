@@ -7,7 +7,7 @@ export default function NewProjectPage() {
       <div>
         <Link
           href="/"
-          className="text-sm text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           ← Back
         </Link>

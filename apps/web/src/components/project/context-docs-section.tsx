@@ -17,17 +17,17 @@ export function ContextDocsSection({
 }) {
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+      <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
         Context documents
       </h2>
-      <p className="text-sm text-neutral-500 dark:text-neutral-400">
+      <p className="text-sm text-muted-foreground">
         Attach PRDs, domain models, or notes. They&apos;re indexed and fed into
         clarifying questions and spec generation for every feature in this
         project.
       </p>
 
       {docs.length > 0 ? (
-        <ul className="divide-y divide-neutral-200 rounded-lg border border-neutral-200 dark:divide-neutral-800 dark:border-neutral-800">
+        <ul className="divide-y rounded-lg border">
           {docs.map((d) => (
             <li
               key={d.id}
@@ -35,7 +35,7 @@ export function ContextDocsSection({
             >
               <div className="min-w-0">
                 <div className="truncate font-medium">{d.title}</div>
-                <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                <div className="text-xs text-muted-foreground">
                   {d.mimeType === "text/markdown" ? "Markdown" : "Text"} ·{" "}
                   {formatBytes(d.byteLength)} ·{" "}
                   {d.createdAt.toLocaleDateString(undefined, {
@@ -48,7 +48,7 @@ export function ContextDocsSection({
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-neutral-400 dark:text-neutral-500">
+        <p className="text-sm text-muted-foreground">
           No documents attached yet.
         </p>
       )}
