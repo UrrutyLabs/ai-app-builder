@@ -1,272 +1,339 @@
-# Architecture — Spec-Driven Dev Tool (v0.1)
+# Architecture — Spec-Driven Dev Tool
 
 > The single source of truth for how this system is structured. Any code we write must conform to this document. If reality and this document disagree, we update one of them — never silently drift.
+>
+> **Reconciled against the codebase on 2026-06-22.** This document originally described an export-only "v0.1." The system has since shipped auth + multi-tenancy, GitHub repo grounding, code generation, and PR creation. The text below reflects what is actually built. The forward plan lives in `roadmap.md`; the product north star lives in `Vision.md`.
 
 ## 1. Product, in one sentence
 
-A control plane for product → engineering translation: it transforms a vague idea into a structured **Feature Spec** and a deterministic **Implementation Plan**, with the human in the loop at every step.
+A control plane for product → engineering translation: it transforms a vague idea into a structured **Feature Spec**, a deterministic **Implementation Plan**, and — when the user asks for it — **real code on a pull-request branch**, with the human in the loop at every step.
 
-It is **not** a code generator, an IDE, a Cursor competitor, or an autonomous agent. The value lives in narrowing requirements, making ambiguity explicit, and producing high-quality structured artifacts.
+It is **not** an IDE, a Cursor competitor, or an autonomous agent. Code generation exists as a utility the pipeline consumes: the output is always a reviewable PR a human approves, never an autonomous merge. The value lives in narrowing requirements, making ambiguity explicit, grounding everything in the real codebase, and producing high-quality structured artifacts.
 
-## 2. v0.1 scope
+## 2. Current capabilities
 
-In scope:
+Shipped and in the repo today:
 
-1. Create a project.
-2. Enter a vague feature idea.
-3. AI generates clarifying questions.
-4. User answers questions.
-5. AI generates a structured `FeatureSpec`.
-6. User edits and approves the spec.
-7. AI generates an `ImplementationPlan`.
-8. User exports spec + plan (JSON / Markdown download).
+1. Create a project (`greenfield` or `existing_system`), scoped to the signed-in user.
+2. Connect a GitHub repo to a project: fetch the file tree, infer conventions, embed files into a vector index.
+3. Enter a vague feature idea.
+4. AI generates clarifying questions, grounded in the connected repo when present.
+5. User answers questions.
+6. AI generates a structured `FeatureSpec` (streamed as it materializes).
+7. User edits and approves the spec. Every save is versioned; a diff view shows what changed between versions.
+8. AI generates an `ImplementationPlan` (steps grouped by area, file changes, test plan, risks).
+9. Export spec + plan as JSON or Markdown.
+10. Create a pull request in one of three modes: **doc-only** (writes spec/plan markdown), **stubs** (scaffolds the files from `plan.fileChanges`), or **generate** (writes real implementations via the codegen loop). PR status syncs back onto the feature page.
 
-Explicitly out of scope for v0.1:
+Authentication (Neon Auth) and multi-tenancy (`Project.userId` scoping) are live.
 
-- Authentication / multi-user.
-- GitHub or any VCS automation (no repo cloning, no PRs, no commits).
-- Repo indexing or codebase awareness.
-- Figma / design-tool integration.
-- Autonomous agents, background jobs, or long-running workflows.
-- Streaming token-by-token UI (LLM calls return complete validated objects).
+Still deferred (see `roadmap.md` for sequencing): per-section spec comments, real-time multiplayer editing, outcome/drift tracking, multi-LLM provider abstraction, org-level prompt customization, Figma/Notion ingestion, and **meeting-transcript ingestion** (the highest-value gap vs. the `Vision.md` wedge — input today is a typed idea, not a refinement transcript).
 
 ## 3. Modes
 
-The system supports two modes, persisted on the `Project`:
+Two modes, persisted on the `Project`:
 
 - `greenfield` — new project, no existing code constraints.
 - `existing_system` — feature on an existing codebase.
 
-For v0.1, both modes use the same pipeline. The mode value is passed into prompts so the LLM can adjust phrasing (e.g. ask about existing conventions in `existing_system`), but there is **no repo indexing yet**.
+The mode is passed into prompts so the LLM adjusts phrasing. In `existing_system` mode with a connected repo, the difference is now substantive, not cosmetic: clarifying questions, spec generation, and code generation all retrieve relevant file snippets and inferred conventions from the repo index (see §10).
 
 ## 4. End-to-end flow
 
 ```
 Dashboard
-  └─ Project (mode: greenfield | existing_system)
+  └─ Project (mode, userId, optional Repo)
+       └─ Repo (file tree, inferred conventions, file embeddings)   [optional]
        └─ Feature
             ├─ idea: string                       (user input)
-            ├─ clarifyingQuestions: Question[]    (LLM step 1)
+            ├─ questions: Question[]              (LLM step 1, repo-grounded)
             ├─ answers: Answer[]                  (user input)
-            ├─ spec: FeatureSpec                  (LLM step 2, draft → approved)
-            └─ plan: ImplementationPlan           (LLM step 3, after spec approved)
+            ├─ spec: FeatureSpec                  (LLM step 2, streamed; draft → approved)
+            │    └─ SpecVersion[]                 (one per save, with diff view)
+            ├─ plan: ImplementationPlan           (LLM step 3, after spec approved)
+            └─ pull request                       (doc-only | stubs | generate)
+                 └─ prUrl, prCreatedAt persisted on Feature
 ```
 
 State machine on `Feature.status`:
 
 ```
-draft → questions_generated → answered → spec_drafted → spec_approved → plan_generated
+DRAFT → QUESTIONS_GENERATED → ANSWERED → SPEC_DRAFTED → SPEC_APPROVED → PLAN_GENERATED
 ```
 
-Transitions are linear and one-way for v0.1. The user can re-run any step, which discards downstream artifacts (e.g. re-running spec generation invalidates the plan).
+PR creation is an action available once a plan exists; it does not add a status value — it records `prUrl` / `prCreatedAt` on the `Feature`. Re-running a step discards downstream artifacts (re-running spec generation invalidates the plan), enforced in the repo functions, not the UI.
 
 ## 5. Monorepo layout
 
 ```
 ai-app-builder/
 ├─ apps/
-│   └─ web/                      # Next.js 15 App Router, the only deployable
+│   └─ web/                      # Next.js 16 App Router, the only deployable
 ├─ packages/
-│   ├─ db/                       # Prisma schema, client, migrations
 │   ├─ domain/                   # Zod schemas, domain types, errors, env validation
-│   └─ ai/                       # LLM client, prompts, tool definitions, parsers
+│   ├─ db/                       # Prisma schema, client, repository functions
+│   ├─ ai/                       # LLM client, prompts, tool definitions, parsers, codegen
+│   ├─ repos/                    # GitHub access, repo indexing, embeddings, PR creation, encryption
+│   ├─ ui/                       # shared React component primitives
+│   ├─ eslint-config/            # shared ESLint config
+│   └─ typescript-config/        # shared tsconfig bases
 ├─ turbo.json
 ├─ pnpm-workspace.yaml
 ├─ package.json
-├─ ARCHITECTURE.md               # this file
-└─ CONVENTIONS.md
+├─ docs/                         # architecture.md, conventions.md, roadmap.md, …
+└─ CLAUDE.md
 ```
 
 Tooling: **pnpm workspaces + Turborepo**. Turbo pipelines: `build`, `lint`, `test`, `typecheck`.
 
 ## 6. Package boundaries
 
-Each package has one responsibility and a one-way dependency arrow. Violating these is a code-review blocker.
+Each package has one responsibility and a mostly one-way dependency arrow. Violating these is a code-review blocker.
 
 ### `packages/domain` — pure types, schemas, errors
 
-- All Zod schemas (`FeatureSpec`, `ImplementationPlan`, `Question`, `Answer`, request/response payloads).
+- All Zod schemas (`FeatureSpec`, `ImplementationPlan`, `Question`, `Answer`, `Repo`/`FileTree`, `ConnectRepoInput`, request/response payloads).
 - TS types are **always** inferred from Zod via `z.infer`. Never hand-written alongside.
 - Domain error classes (`AppError`, `ValidationError`, `LlmError`, `NotFoundError`, `ConflictError`).
-- Env schema (`packages/domain/src/env.ts`) — validates `process.env` at boot.
+- Env schema (`packages/domain/src/env-schema.ts` + `env.ts`) — validates `process.env`.
 - **No runtime dependencies on Next.js, Prisma, or the Anthropic SDK.** Pure TS only.
 
 ### `packages/db` — persistence
 
-- Prisma schema and generated client.
-- Migration scripts.
-- Thin repository functions (e.g. `getFeatureById`, `updateFeatureStatus`) that return domain types from `packages/domain`.
+- Prisma schema (Postgres + `pgvector`) and generated client.
+- Thin repository functions per aggregate under `src/repos/`: `projects.ts`, `features.ts`, `repos.ts`, `embeddings.ts`, `spec-versions.ts`. They return domain types from `packages/domain`.
 - Owns nothing about HTTP, LLMs, or UI.
 - Depends on: `packages/domain`.
 
-### `packages/ai` — LLM orchestration
+### `packages/ai` — LLM orchestration & code generation
 
-- Anthropic SDK wrapper.
-- One file per LLM step under `src/steps/`: `generate-questions.ts`, `generate-spec.ts`, `generate-plan.ts`.
-- Each step exports a single async function:
-  ```ts
-  export async function generateSpec(input: GenerateSpecInput): Promise<FeatureSpec>
-  ```
-- Prompts live colocated with their step under `src/steps/<step>/prompt.ts` as pure functions returning a string. No prompts inline in components or actions.
-- Uses **Anthropic tool use** with Zod-derived JSON Schema for structured output (see §8).
-- Model routing centralized in `src/models.ts` (Sonnet by default, Opus for plan).
-- Depends on: `packages/domain`. Does **not** depend on `packages/db` or Next.js — it is pure I/O over the network.
+- Anthropic SDK wrapper (`client.ts`, `tool-use.ts`).
+- One directory per step under `src/steps/`: `generate-questions`, `generate-spec` (+ `stream.ts`), `generate-plan`, `generate-file` (code generation), `check-consistency` (cross-file pass).
+- Each step exports a single async function returning a validated, typed object; prompts are sibling pure functions in `<step>/prompt.ts`. No prompts inline in components or actions.
+- Structured output via **Anthropic tool use** with Zod-derived JSON Schema (see §9).
+- Model routing centralized in `src/models.ts`.
+- Depends on: `packages/domain`. Does **not** depend on `packages/db`, `packages/repos`, or Next.js — it is pure I/O over the network. Repo context is passed *in* as plain data by the caller.
+
+### `packages/repos` — GitHub access, indexing, PRs
+
+- GitHub API access (`github.ts`, `fetch-tree.ts`, `fetch-files.ts`, `pull-request.ts`).
+- Repo indexing: file embedding (`embed.ts`, `index-files.ts`) and convention inference (`infer-conventions.ts`, `summarize-conventions.ts`).
+- Retrieval helpers (`render-snippets.ts`) and token encryption at rest (`encryption.ts`).
+- Split entrypoints: `index.ts` (safe for any context) vs. `server.ts` / `secure.ts` (server-only: embedding calls, decryption). Import `@repo/repos/server` only from server code.
+- Depends on: `packages/domain`.
 
 ### `apps/web` — UI + thin orchestration
 
-- Next.js App Router, TypeScript, Tailwind, shadcn/ui.
+- Next.js 16 App Router, TypeScript, Tailwind, shadcn/ui.
 - Pages are React Server Components (RSC). Client components are leaves marked `"use client"` only when needed (forms, dialogs, editors).
-- Server Actions in `app/_actions/*.ts` for mutations. Each action: validates input with Zod → calls `packages/db` and/or `packages/ai` → revalidates path → returns typed result.
-- Route Handlers in `app/api/.../route.ts` only when we need streaming or non-form clients (none in v0.1; reserved for future).
-- Depends on: `packages/db`, `packages/domain`, `packages/ai`.
+- Server Actions in `app/_actions/*.ts` for mutations: `projects`, `features`, `questions`, `answers`, `spec`, `plan`, `export`, `repo`. Each action validates input with Zod → calls packages → revalidates path → returns `ActionResult<T>`.
+- Route Handlers in `app/api/.../route.ts` for the cases Server Actions can't serve: `auth/[...path]` (Neon Auth), `spec/stream` (SSE streaming spec generation), `pr/create` (long-running PR build with progress events).
+- `middleware.ts` enforces auth; `lib/auth/*` wraps session access (`requireUser`).
+- Depends on: `packages/db`, `packages/domain`, `packages/ai`, `packages/repos`, `packages/ui`.
 
 Dependency graph:
 
 ```
-apps/web ──► packages/db ──► packages/domain
-   │                              ▲
-   └──────► packages/ai ──────────┘
+apps/web ──► packages/db    ──► packages/domain
+   │      ──► packages/ai    ──► packages/domain
+   │      ──► packages/repos ──► packages/domain
+   │      ──► packages/ui
 ```
 
-`packages/db` and `packages/ai` may **not** import each other. The web app composes them.
+`db`, `ai`, and `repos` may **not** import each other. The web app composes them (e.g. `pr-runner` pulls repo context from `@repo/db` + `@repo/repos` and passes it as data into `@repo/ai`).
 
-### Database hosting (v0.1)
+### Database hosting
 
-Postgres is hosted on **[Neon](https://neon.tech)**. No local Docker Postgres in v0.1 — Prisma talks to a Neon connection URL identically to any other Postgres. We use a **pooled** connection (`DATABASE_URL`) for the Next.js runtime and a **direct** connection (`DIRECT_URL`) for Prisma migrations, per [Prisma's Neon guidance](https://www.prisma.io/docs/orm/overview/databases/neon). Dev and test use separate Neon branches so test runs cannot stomp on dev data.
+Postgres is hosted on **[Neon](https://neon.tech)** with the `vector` (pgvector) extension enabled for embeddings. No local Docker Postgres. We use a **pooled** connection (`DATABASE_URL`) for the Next.js runtime and a **direct** connection (`DIRECT_URL`) for Prisma migrations. Dev and test use separate Neon branches (`TEST_DATABASE_URL` / `TEST_DIRECT_URL`) so test runs cannot stomp on dev data. Neon Auth syncs users into `neon_auth.users_sync`, which `Project.userId` references.
 
-## 7. Data model (Prisma, v0.1)
+## 7. Data model (Prisma)
 
 ```prisma
 model Project {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
+  userId      String?                  // Neon Auth user; nullable for legacy/orphan claim
   name        String
-  mode        Mode     // enum: GREENFIELD | EXISTING_SYSTEM
+  mode        Mode
   description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  specPath    String?                  // last-used PR path for spec docs
+  planPath    String?                  // last-used PR path for plan docs
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   features    Feature[]
+  repo        Repo?
+  @@index([userId])
+}
+
+model Repo {
+  id             String              @id @default(cuid())
+  projectId      String              @unique
+  project        Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  owner          String
+  repo           String
+  defaultBranch  String
+  encryptedToken String               // GitHub token, encrypted at rest (@repo/repos)
+  fileTree       Json?
+  conventions    Json?                // inferred lint/format/test stack + patterns
+  lastIndexedAt  DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  embeddings     RepoFileEmbedding[]
+}
+
+model RepoFileEmbedding {
+  id        String                       @id @default(cuid())
+  repoId    String
+  repo      Repo                         @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  path      String
+  content   String
+  embedding Unsupported("vector(1536)")  // pgvector
+  updatedAt DateTime                     @default(now())
+  @@unique([repoId, path])
+  @@index([repoId])
 }
 
 model Feature {
-  id            String        @id @default(cuid())
-  projectId     String
-  project       Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  title         String
-  idea          String        // raw user input
-  status        FeatureStatus // enum
-  questions     Json?         // Question[]   — see Zod schema
-  answers       Json?         // Answer[]
-  spec          Json?         // FeatureSpec
-  plan          Json?         // ImplementationPlan
-  approvedAt    DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id           String        @id @default(cuid())
+  projectId    String
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title        String
+  idea         String
+  status       FeatureStatus @default(DRAFT)
+  questions    Json?         // Question[]
+  answers      Json?         // Answer[]
+  spec         Json?         // FeatureSpec
+  plan         Json?         // ImplementationPlan
+  approvedAt   DateTime?
+  prUrl        String?
+  prCreatedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  specVersions SpecVersion[]
 }
 
-enum Mode             { GREENFIELD EXISTING_SYSTEM }
-enum FeatureStatus    { DRAFT QUESTIONS_GENERATED ANSWERED SPEC_DRAFTED SPEC_APPROVED PLAN_GENERATED }
+model SpecVersion {
+  id        String   @id @default(cuid())
+  featureId String
+  feature   Feature  @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  spec      Json
+  createdAt DateTime @default(now())
+  @@index([featureId, createdAt])
+}
+
+enum Mode          { GREENFIELD EXISTING_SYSTEM }
+enum FeatureStatus { DRAFT QUESTIONS_GENERATED ANSWERED SPEC_DRAFTED SPEC_APPROVED PLAN_GENERATED }
 ```
 
-**Why JSON columns for spec/plan?** v0.1 treats them as opaque structured documents validated by Zod on read/write. We promote them to relational tables only if we need to query inside (e.g. "find all features with API changes"). Premature normalization is the enemy.
+**Why JSON columns for `questions` / `answers` / `spec` / `plan`?** They are opaque structured documents validated by their Zod schema on read and write. We promote them to relational tables only when a query needs to reach inside (e.g. "find all features with API changes"). Premature normalization is the enemy. To clear a JSON column use `Prisma.DbNull`, not bare `null`.
 
-`FeatureSpec` and `ImplementationPlan` shapes are defined as Zod schemas in `packages/domain/src/schemas/`; the canonical `FeatureSpec` shape is the one in the brief.
+`FeatureSpec` and `ImplementationPlan` shapes are Zod schemas in `packages/domain/src/schemas/`.
 
-### `ImplementationPlan` shape (v0.1)
+### `FeatureSpec` shape
+
+```ts
+type FeatureSpec = {
+  title: string;
+  problem: string;
+  goal: string;
+  mode: "greenfield" | "existing_system";
+  scope: { in: string[]; out: string[] };
+  actors: string[];
+  userFlows: string[];
+  uiStates: string[];
+  businessRules: string[];
+  dataChanges: string[];
+  apiChanges: string[];
+  acceptanceCriteria: string[];
+  assumptions: string[];
+  openQuestions: string[];
+};
+```
+
+### `ImplementationPlan` shape
 
 ```ts
 type AffectedArea = "frontend" | "backend" | "database" | "infrastructure" | "docs" | "tests";
 
 type ImplementationPlan = {
   summary: string;                       // TL;DR tying back to the spec
-  affectedAreas: AffectedArea[];         // ≥1, top-level overview
-  fileChanges: Array<{                   // can be empty
+  affectedAreas: AffectedArea[];         // ≥1
+  fileChanges: Array<{                   // can be empty; content is NOT here — codegen produces it
     path: string;
     action: "create" | "modify" | "delete";
-    summary: string;                     // one-line what/why
+    summary: string;
   }>;
-  steps: Array<{                         // ≥1, ordered by array position
-    title: string;
-    description: string;
-    area: AffectedArea;                  // for grouping in the UI
-  }>;
-  testPlan: string[];                    // ≥1 items
-  risks: Array<{                         // ≥1 — the LLM must always surface at least one
-    description: string;
-    mitigation: string;
-  }>;
+  steps: Array<{ title: string; description: string; area: AffectedArea }>;  // ≥1, ordered by position
+  testPlan: string[];                    // ≥1
+  risks: Array<{ description: string; mitigation: string }>;                 // ≥1, forces edge-case thinking
 };
 ```
 
-Design notes:
-- Step order is implicit (array position) — no explicit `order` field, no renumbering pain on insert.
-- `step.area` lets the UI render steps grouped by layer, in addition to the top-level `affectedAreas` summary.
-- `risks` is required ≥1 to force the LLM to think about edge cases / failure modes rather than skipping.
-- `fileChanges` may be empty (e.g. pure-doc changes, infra-only tweaks) so we don't fight the LLM into faking entries.
+Step order is implicit (array position). `risks` is required ≥1 so the LLM surfaces failure modes. `fileChanges` may be empty (pure-doc or infra-only changes); the plan describes *what* changes, while code generation (§11) produces the actual file *content*.
 
-## 8. LLM integration
+## 8. Authentication & multi-tenancy
 
-**Provider:** Anthropic only. SDK: `@anthropic-ai/sdk`. Models routed via `packages/ai/src/models.ts`:
+- **Neon Auth** (powered by Stack Auth). The auth UI mounts at `app/auth/[...path]`; the handler at `app/api/auth/[...path]/route.ts`. `middleware.ts` gates protected routes.
+- Users sync into `neon_auth.users_sync` in the same Postgres, so `Project.userId` is a plain foreign key — no webhook sync layer.
+- `lib/auth/server.ts` exposes `requireUser()`; every Server Action that touches user data resolves the user and scopes queries (`getProjectByIdForUser`, etc.).
+- `Project.userId` is nullable to support **orphan claiming**: projects created before auth can be claimed by the first signed-in user (`claim-orphans-banner`).
+
+## 9. LLM integration
+
+**Provider:** Anthropic for generation; OpenAI for embeddings. SDK: `@anthropic-ai/sdk`. Models routed via `packages/ai/src/models.ts`:
 
 ```ts
-import { env } from "@repo/domain/env";
-
 export const MODELS = {
-  questions: env.AI_MODEL_QUESTIONS ?? "claude-haiku-4-5-20251001",
+  questions: env.AI_MODEL_QUESTIONS ?? "claude-haiku-4-5-20251001", // cheap, fine for short Q-gen
   spec:      env.AI_MODEL_SPEC      ?? "claude-sonnet-4-6",
   plan:      env.AI_MODEL_PLAN      ?? "claude-opus-4-7",
+  code:      env.AI_MODEL_CODE      ?? "claude-sonnet-4-6",         // file generation
 } as const;
 ```
 
-Defaults pick the cheapest model that does the job: Haiku for clarifying questions (cheap, plenty smart for short Q-generation), Sonnet for the spec, Opus for the implementation plan. Override per env var (`AI_MODEL_QUESTIONS`, `AI_MODEL_SPEC`, `AI_MODEL_PLAN`) for local experimentation.
+Override per env var for local experimentation. **`temperature` is omitted for the plan step** because it's deprecated on Opus 4.7 (`tool-use.ts` makes it optional); Sonnet and Haiku steps still set it.
 
 **Structured output via tool use.** For every step that produces a structured object:
 
-1. Define the output Zod schema in `packages/domain`.
-2. Convert it to JSON Schema with `zod-to-json-schema` at module load.
+1. Define the output Zod schema (in `packages/domain` for shared shapes, or locally in the step for internal ones like the codegen `{ content }` envelope).
+2. Convert it to JSON Schema with `zod-to-json-schema`.
 3. Pass it as a tool to the Anthropic API with `tool_choice: { type: "tool", name: "..." }`.
 4. Parse the tool input through the same Zod schema before returning. Any parse failure → throw `LlmError` with the raw payload attached.
 
-Retry policy: one retry on `LlmError` for spec/plan generation. No retry for questions (cheap to ask the user to rerun).
+**Streaming.** Spec generation has a streaming variant (`generate-spec/stream.ts`, surfaced via the `spec/stream` SSE route) so the user watches the spec materialize instead of waiting on a spinner. Other steps return complete validated objects.
 
-**Determinism knobs.** `temperature: 0.2` for spec/plan, `0.5` for clarifying questions. `max_tokens` set per step. No streaming in v0.1.
+**Embeddings.** Repo files are embedded with OpenAI (`vector(1536)`) and stored in `RepoFileEmbedding` for retrieval (§10).
 
-**No prompts in UI code.** Every prompt is a pure function in `packages/ai/src/steps/<step>/prompt.ts`, unit-tested for stability against fixture inputs.
+**Determinism knobs.** Low temperature (≈0.2) for spec/plan/code, higher (≈0.5) for clarifying questions. `max_tokens` and retry policy are constants at the top of each step file.
 
-## 9. Request flow per step
+**No prompts in UI code.** Every prompt is a pure function in `packages/ai/src/steps/<step>/prompt.ts`, snapshot-tested for stability.
 
-### Step 1 — Idea → Questions
+## 10. Repo grounding & retrieval
 
-```
-[Client form: textarea]
-   └─ Server Action `generateQuestions(featureId, idea)`
-        ├─ Zod-validate input
-        ├─ db.updateFeature({ idea, status: DRAFT })
-        ├─ ai.generateQuestions({ idea, mode })   ── Anthropic call
-        ├─ Zod-validate output (Question[])
-        ├─ db.updateFeature({ questions, status: QUESTIONS_GENERATED })
-        └─ revalidatePath(`/projects/${id}/features/${featureId}`)
-```
+When a repo is connected (`existing_system`), `connectRepoAction`:
 
-### Step 2 — Answers → Spec (draft)
+1. Parses the GitHub URL, stores the repo with its token **encrypted at rest** (`@repo/repos` encryption, `ENCRYPTION_KEY`).
+2. Fetches the file tree and **infers conventions** (lint/format, test stack, common patterns) into `Repo.conventions`.
+3. **Embeds** repo files (`fetchAndEmbedRepoFiles`) into `RepoFileEmbedding`.
 
-Same shape: action validates `Answer[]`, calls `ai.generateSpec`, persists draft, revalidates. Status → `SPEC_DRAFTED`.
+At generation time, the relevant spec sections / feature idea are embedded and used to retrieve top-K similar files (`searchSimilarFiles`, `TOP_K_PER_FILE`). Retrieved snippets plus a convention summary are rendered into the prompts for questions, spec, and code generation — so the system asks grounded questions and writes code that matches existing patterns. This is the capability that distinguishes the product from "ChatGPT with a nice form."
 
-### Step 2b — Edit and approve spec
+## 11. Code generation & pull requests
 
-User edits the draft in a `react-hook-form` editor with Zod resolver (the same Zod schema). Approval is a server action that sets `approvedAt` and `status = SPEC_APPROVED`. No LLM call.
+PR creation runs through `app/api/pr/create/route.ts` → `lib/pr-runner.ts`, emitting progress events (`pr-events.ts`) consumed by a streaming progress UI. The input `fileMode` selects one of three strategies:
 
-### Step 3 — Approved Spec → Plan
+- **`none` (doc-only):** writes `<specPath>` and `<planPath>` markdown to a feature branch and opens a PR with the plan as the body. Lowest risk; usable by any team.
+- **`stubs`:** scaffolds the files from `plan.fileChanges` with stub bodies (`scaffold-stubs.ts`), each plan step becoming a checkbox in the PR.
+- **`generate`:** produces real implementations. For each file change, `generateFile` (`@repo/ai`) writes content grounded in retrieved repo snippets, then **verifies** it:
+  - syntax check (`verify.ts`) and **typecheck loop** (`typecheck.ts`) with up to one repair attempt;
+  - large `modify` targets (> ~6000 chars) use **SEARCH/REPLACE edits** (`edits.ts` / `apply-edits.ts`) to bound LLM output to the size of the change, not the file;
+  - a **cross-file consistency pass** (`check-consistency`) flags mismatches across the generated set.
 
-`ai.generatePlan` (Opus) takes the approved spec and returns an `ImplementationPlan`. Persisted, status → `PLAN_GENERATED`.
+The branch is pushed and a PR opened via `@repo/repos` (`pull-request.ts`); `prUrl` / `prCreatedAt` are written back to the `Feature` and shown inline (`pr-status-badge`). When the PR later merges, the diff-vs-plan signal is captured to inform future plan generation.
 
-### Step 4 — Export
-
-Server Action returns `{ spec, plan }` as JSON; client triggers a download. A second action returns the same content rendered as Markdown. No LLM call.
-
-## 10. Error handling at boundaries
+## 12. Error handling at boundaries
 
 - Inside packages: throw typed errors (`AppError` subclasses).
-- At the Server Action boundary: catch, log, return a discriminated union:
+- At the Server Action / Route Handler boundary: catch, log, return a discriminated union:
   ```ts
   type ActionResult<T> =
     | { ok: true;  data: T }
@@ -275,12 +342,16 @@ Server Action returns `{ spec, plan }` as JSON; client triggers a download. A se
 - The client renders `error.message` in a toast and never trusts unsanitized error fields.
 - Unknown errors are logged with full stack server-side and surfaced as `{ code: "INTERNAL", message: "Something went wrong" }`.
 
-## 11. What we'll add later (explicitly deferred)
+## 13. What we'll add later (explicitly deferred)
 
-- Auth + multi-tenancy (clean migration: add `User`, scope `Project.userId`).
-- Streaming UI for spec generation.
-- Repo indexing for `existing_system` mode (vector store + retrieval into prompts).
-- GitHub PR creation from `ImplementationPlan`.
-- Versioning and diffing of specs.
+Tracked in `roadmap.md`. Not built yet:
 
-These are intentionally out of v0.1. Do not pre-build hooks for them.
+- **Meeting-transcript ingestion** — paste a refinement transcript → auto-draft idea + clarifying answers. The biggest gap vs. the `Vision.md` wedge.
+- **Tickets out** — export an approved spec to Linear/Jira with acceptance criteria.
+- **Provenance / lineage** — record the source of each artifact field, the first step toward the `Initiative → Decisions` spine in `Vision.md` §5.
+- **Collaboration** — per-section spec comments; real-time multiplayer editing.
+- **Outcome tracking** — cycle-time metrics, spec-drift detection, plan-accuracy feedback.
+- **Enterprise** — multi-LLM provider abstraction, org-level prompt customization, custom `FeatureSpec` fields.
+- **Other context sources** — Figma design intent, Notion/PRD ingestion.
+
+Do not pre-build hooks for these. The one architectural decision worth making deliberately before extending is whether to evolve the current `Project → Feature` schema toward the `Initiative → Decisions → Tickets → Changes` provenance spine (`Vision.md` §5); see `roadmap.md` for the recommendation.
