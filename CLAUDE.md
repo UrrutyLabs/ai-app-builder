@@ -35,7 +35,7 @@ If a required pattern is missing from these docs, propose adding it in the same 
 These rules come from working sessions and are load-bearing. Don't dump full implementations on the user.
 
 1. **Small, explained steps.** Propose the smallest version that fits the pipeline, name decisions and tradeoffs, then **wait for confirmation** before moving on. The user wants to stay in the driver's seat.
-2. **No premature abstraction.** Three similar lines beats a clever helper. Pre-built hooks for deferred features (auth, repo indexing, GitHub PRs, streaming) are forbidden — explicitly out of v0.1.
+2. **No premature abstraction.** Three similar lines beats a clever helper. Don't pre-build hooks for deferred features — see `roadmap.md` for what's explicitly out of scope today (e.g. Figma/Notion ingestion, real-time collaboration, multi-LLM provider abstraction, a generalized `ContextSource` layer). Build the concrete thing; generalize only when a second real case exists.
 3. **Never silently guess.** When requirements are ambiguous, surface assumptions and ask. This applies to code AND to the artifacts the product itself generates (specs, plans).
 4. **Prefer structured outputs over prose.** Zod-validated JSON via tool-use beats freeform.
 

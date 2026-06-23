@@ -1,6 +1,6 @@
 # Feature brief — Transcript ingestion
 
-> Status: **planned, not started.** Phase 1 of `roadmap.md` ("Path to users"). This is the highest-leverage net-new feature and the biggest gap between the code and the `Vision.md` wedge. Read `architecture.md` and `conventions.md` before implementing.
+> Status: **✅ shipped (2026-06-23).** This brief is kept as the design record. The feature is live; see `architecture.md` §10 (Grounding & retrieval) for how it works in the codebase and `roadmap.md` Foundation for status.
 
 ## Goal
 

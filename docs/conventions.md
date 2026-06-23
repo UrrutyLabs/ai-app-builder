@@ -120,7 +120,7 @@ apps/web/src/
 - **Default to Server Components.** A file becomes a Client Component only when it needs `useState`, `useEffect`, event handlers, or a browser-only API.
 - Mark client leaves with `"use client"` at the top. Don't push `"use client"` to a layout to "make children work" — push it down to the smallest interactive leaf.
 - Server Components import freely from `packages/db` and `packages/ai`. Client Components must not — they call Server Actions instead.
-- No data fetching libraries (React Query, SWR) in v0.1. Fetch in RSCs, mutate via Server Actions, revalidate paths.
+- No data fetching libraries (React Query, SWR). Fetch in RSCs, mutate via Server Actions, revalidate paths.
 
 ## 6. Server Actions
 
@@ -162,7 +162,7 @@ Rules:
 
 ## 7. Route Handlers
 
-Reserve `app/api/.../route.ts` for cases that Server Actions cannot serve (streaming, third-party webhooks, non-form clients). v0.1 has none. If you're tempted to add one, justify it in the PR description.
+Reserve `app/api/.../route.ts` for cases that Server Actions cannot serve (streaming, third-party webhooks, non-form clients). Current route handlers: `api/auth/[...path]` (Neon Auth), `api/pr/create` and `api/spec/stream` (SSE streaming). If you add another, justify it in the PR description — a Server Action is the default.
 
 ## 8. LLM call conventions (`packages/ai`)
 
@@ -202,7 +202,7 @@ export class LlmError        extends AppError { /* ... */ }
 - `react-hook-form` + `@hookform/resolvers/zod`, using the **same** Zod schema as the Server Action.
 - Use shadcn/ui `Form`, `FormField`, `FormItem`, `FormLabel`, `FormControl`, `FormMessage` primitives.
 - Submit handler calls the Server Action and renders `error.message` in a toast on failure.
-- Don't optimistic-update in v0.1; revalidate and re-render.
+- Don't optimistic-update; revalidate and re-render.
 
 ## 11. Testing (Vitest)
 
@@ -214,7 +214,7 @@ export class LlmError        extends AppError { /* ... */ }
 - Mandatory integration tests (`*.spec.ts`):
   - End-to-end pipeline for one feature: idea → questions → spec → plan, with the Anthropic client mocked at the SDK boundary.
 - No tests for trivial RSC pages or shadcn-generated components.
-- No E2E (Playwright) in v0.1.
+- No E2E (Playwright) yet.
 - Run `pnpm test` (unit) and `pnpm test:integration` separately. Both must be green to merge.
 
 ## 12. Lint, format, commits
@@ -229,14 +229,19 @@ export class LlmError        extends AppError { /* ... */ }
 
 - All env access goes through `packages/domain/src/env.ts`, which validates `process.env` with Zod at module load. App fails to boot on missing/invalid env.
 - No `process.env.X` reads anywhere else. ESLint rule enforces this.
-- Required vars for v0.1:
+- Required vars (validated in `packages/domain/src/env-schema.ts`):
   ```
   DATABASE_URL=...                             # Neon pooled connection
   DIRECT_URL=...                               # Neon direct connection (for Prisma migrations)
-  ANTHROPIC_API_KEY=...
+  ANTHROPIC_API_KEY=...                        # LLM steps
+  OPENAI_API_KEY=...                           # embeddings (repo + context docs)
+  ENCRYPTION_KEY=...                           # AES-256-GCM for stored GitHub tokens
+  NEON_AUTH_BASE_URL=...                        # Neon Auth (Better Auth)
+  NEON_AUTH_COOKIE_SECRET=...                   # Neon Auth session cookie (min 32 chars)
   AI_MODEL_QUESTIONS=claude-haiku-4-5-20251001 # optional override (default: haiku)
   AI_MODEL_SPEC=claude-sonnet-4-6              # optional override (default: sonnet)
   AI_MODEL_PLAN=claude-opus-4-7                # optional override (default: opus)
+  AI_MODEL_CODE=claude-sonnet-4-6              # optional override (default: sonnet)
   ```
 - `.env.example` is committed; `.env` is gitignored. Update `.env.example` whenever the schema changes.
 

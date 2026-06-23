@@ -1,6 +1,6 @@
 # Feature brief — Project context documents
 
-> Status: **planned, not started.** Follows Phase 1's transcript ingestion as the next leverage step. First concrete extension of grounding sources beyond the connected repo, and the seam where a generalized `ContextSource` abstraction begins. Read `architecture.md`, `conventions.md`, and `roadmap.md` (strategic call) before implementing.
+> Status: **✅ shipped (2026-06-23).** This brief is kept as the design record. The feature is live; see `architecture.md` §10 (Grounding & retrieval) for how it works in the codebase and `roadmap.md` Foundation for status. The generalized `ContextSource` abstraction described as the eventual direction remains deferred (Phase 5) — `ProjectContextDoc` is the concrete pattern it will build on.
 
 ## Goal
 
