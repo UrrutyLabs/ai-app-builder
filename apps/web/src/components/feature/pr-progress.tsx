@@ -113,7 +113,7 @@ export function PrProgress({
           <StatusIcon state={row.state} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-2">
-              <span className="font-mono text-xs">{row.path}</span>
+              <span className="break-all font-mono text-xs">{row.path}</span>
               <span className="text-xs text-muted-foreground">
                 ({row.action})
               </span>

@@ -91,7 +91,7 @@ export function GenerateSpecButton({
           </div>
           <pre
             ref={previewRef}
-            className="max-h-80 overflow-auto rounded-lg border bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground"
+            className="max-h-80 w-full overflow-y-auto whitespace-pre-wrap break-words rounded-lg border bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground"
           >
             {JSON.stringify(snapshot, null, 2)}
           </pre>
