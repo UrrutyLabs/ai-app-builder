@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import localFont from "next/font/local";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth/auth-provider";
-import { HeaderUserMenu } from "@/components/auth/header-user-menu";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -30,15 +29,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <header className="border-b border-neutral-200 dark:border-neutral-800">
-            <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
-              <Link href="/" className="font-semibold tracking-tight">
-                ai-app-builder
-              </Link>
-              <HeaderUserMenu />
-            </div>
-          </header>
-          <main className="mx-auto max-w-4xl px-6 py-10">{children}</main>
+          {children}
+          <Toaster />
         </AuthProvider>
       </body>
     </html>

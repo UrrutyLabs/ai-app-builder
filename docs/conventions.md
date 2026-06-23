@@ -122,6 +122,14 @@ apps/web/src/
 - Server Components import freely from `packages/db` and `packages/ai`. Client Components must not — they call Server Actions instead.
 - No data fetching libraries (React Query, SWR). Fetch in RSCs, mutate via Server Actions, revalidate paths.
 
+### Design system
+
+- **Primitives: shadcn/ui** (radix-nova style), generated into `apps/web/src/components/ui/`. These are owned source files — edit them when needed (e.g. to satisfy `exactOptionalPropertyTypes`). They live in the app, not `packages/ui`, until a second consumer exists.
+- **Icons: `lucide-react`.** No inline SVG icon paths, no emoji. Import the named icon component.
+- **Toasts: `sonner`.** Mutation feedback (success/error) goes through a toast, not an inline `<p>`. The `<Toaster>` is mounted once in the root layout.
+- **`cn()` from `@/lib/utils`** (clsx + tailwind-merge) for conditional classes — never hand-concatenate class strings.
+- **The workspace shell** (header + sidebar) lives under a `(workspace)` route group with a shared `layout.tsx`. Shell pieces are in `components/layout/`. Keep them Server Components where possible; push `"use client"` to the smallest interactive leaf (e.g. the sidebar toggle, the project-switcher dropdown).
+
 ## 6. Server Actions
 
 Every Server Action follows this template:
