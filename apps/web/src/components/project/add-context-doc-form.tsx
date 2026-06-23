@@ -5,6 +5,15 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,6 +31,13 @@ export function AddContextDocForm({ projectId }: { projectId: string }) {
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const reset = () => {
+    setTitle("");
+    setContent("");
+    setMimeType("text/markdown");
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleFile = async (file: File) => {
     const text = await file.text();
@@ -51,88 +67,102 @@ export function AddContextDocForm({ projectId }: { projectId: string }) {
       return;
     }
     toast.success("Document added and indexed");
-    setTitle("");
-    setContent("");
+    reset();
     setOpen(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
     router.refresh();
   };
 
-  if (!open) {
-    return (
-      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
-        <Plus className="size-4" aria-hidden="true" />
-        Add document
-      </Button>
-    );
-  }
-
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border p-4">
-      <div className="space-y-2">
-        <Label htmlFor="doc-title">Title</Label>
-        <Input
-          id="doc-title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Orders PRD"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="doc-file">
-          Upload a file{" "}
-          <span className="font-normal text-muted-foreground">
-            (.md or .txt)
-          </span>
-        </Label>
-        <Input
-          id="doc-file"
-          ref={fileInputRef}
-          type="file"
-          accept=".md,.markdown,.txt,text/markdown,text/plain"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) void handleFile(file);
-          }}
-          className="cursor-pointer"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="doc-content">…or paste the content</Label>
-        <Textarea
-          id="doc-content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={10}
-          className="font-mono text-xs leading-relaxed"
-          placeholder="# Product requirements&#10;&#10;The orders system should…"
-        />
-        <p className="text-xs text-muted-foreground">
-          {content.length.toLocaleString()} / {MAX_CHARS.toLocaleString()} chars
-        </p>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <Button
-          type="submit"
-          disabled={
-            isSubmitting ||
-            content.trim().length === 0 ||
-            title.trim().length === 0
-          }
-        >
-          {isSubmitting ? "Adding & indexing…" : "Add document"}
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) reset();
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline">
+          <Plus className="size-4" aria-hidden="true" />
+          Add document
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => setOpen(false)}
-        >
-          Cancel
-        </Button>
-      </div>
-    </form>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Add context document</DialogTitle>
+          <DialogDescription>
+            Paste or upload a PRD, domain model, or notes. It&apos;s chunked,
+            embedded, and fed into every feature in this project.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="doc-title">Title</Label>
+            <Input
+              id="doc-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Orders PRD"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="doc-file">
+              Upload a file{" "}
+              <span className="font-normal text-muted-foreground">
+                (.md or .txt)
+              </span>
+            </Label>
+            <Input
+              id="doc-file"
+              ref={fileInputRef}
+              type="file"
+              accept=".md,.markdown,.txt,text/markdown,text/plain"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void handleFile(file);
+              }}
+              className="cursor-pointer"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="doc-content">…or paste the content</Label>
+            <Textarea
+              id="doc-content"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              rows={14}
+              className="font-mono text-xs leading-relaxed"
+              placeholder="# Product requirements&#10;&#10;The orders system should…"
+            />
+            <p className="text-xs text-muted-foreground">
+              {content.length.toLocaleString()} / {MAX_CHARS.toLocaleString()}{" "}
+              chars
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                isSubmitting ||
+                content.trim().length === 0 ||
+                title.trim().length === 0
+              }
+            >
+              {isSubmitting ? "Adding & indexing…" : "Add document"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
