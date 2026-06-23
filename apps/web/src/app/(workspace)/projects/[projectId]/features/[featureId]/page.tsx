@@ -1,63 +1,97 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  ArrowRight,
-  FileText,
-  FolderGit2,
-  GitPullRequest,
-  History,
-  Lock,
-  Mic,
-} from "lucide-react";
+import { ArrowRight, Circle, CircleCheck, CircleDot, Lock } from "lucide-react";
 import {
   countSpecVersionsByFeatureId,
-  getEncryptedTokenForProject,
   getFeatureById,
   getProjectByIdForUser,
-  getRepoByProjectId,
-  listContextDocsByProjectId,
 } from "@repo/db";
-import { decryptToken } from "@repo/repos/server";
-import { getCurrentUser } from "@/lib/auth/server";
-
-export const dynamic = "force-dynamic";
-import { fetchPrStatus, type PrStatus } from "@/lib/pr-status";
-import { PrStatusBadge } from "@/components/feature/pr-status-badge";
-import { countGeneratable, countScaffoldable } from "@/lib/scaffold-stubs";
 import {
   AnswerListSchema,
   FeatureSpecSchema,
   ImplementationPlanSchema,
   QuestionListSchema,
 } from "@repo/domain/schemas";
+import { getCurrentUser } from "@/lib/auth/server";
+import { Badge } from "@/components/ui/badge";
 import { GenerateQuestionsButton } from "@/components/feature/generate-questions-button";
 import { AnswerForm } from "@/components/feature/answer-form";
-import { GeneratePlanButton } from "@/components/feature/generate-plan-button";
-import { PlanView } from "@/components/feature/plan-view";
 import { ExportButtons } from "@/components/feature/export-buttons";
-import { CreatePrForm } from "@/components/feature/create-pr-form";
 import { TranscriptContextView } from "@/components/feature/transcript-context-view";
+import { CollapsibleStage } from "@/components/feature/collapsible-stage";
 import { parseTranscriptContext } from "@/lib/transcript-context";
-import { Badge } from "@/components/ui/badge";
-import {
-  FeatureStepper,
-  type Stage,
-} from "@/components/feature/feature-stepper";
 
-function SectionHeading({ children }: { children: React.ReactNode }) {
+export const dynamic = "force-dynamic";
+
+type StageState = "done" | "active" | "todo" | "locked";
+
+function StageIcon({ state }: { state: StageState }) {
+  if (state === "done")
+    return (
+      <CircleCheck
+        className="size-4 text-emerald-600 dark:text-emerald-400"
+        aria-hidden="true"
+      />
+    );
+  if (state === "active")
+    return <CircleDot className="size-4 text-primary" aria-hidden="true" />;
+  if (state === "locked")
+    return <Lock className="size-4 text-muted-foreground" aria-hidden="true" />;
+  return <Circle className="size-4 text-muted-foreground" aria-hidden="true" />;
+}
+
+function RowInner({
+  state,
+  label,
+  summary,
+}: {
+  state: StageState;
+  label: string;
+  summary: string;
+}) {
   return (
-    <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-      {children}
-    </h2>
+    <>
+      <span className="shrink-0">
+        <StageIcon state={state} />
+      </span>
+      <span className="w-12 shrink-0 text-sm font-medium">{label}</span>
+      <span className="flex-1 truncate text-sm text-muted-foreground">
+        {summary}
+      </span>
+    </>
   );
 }
 
-function LockedNote({ children }: { children: React.ReactNode }) {
+/** A stage that opens its own workspace route. Locked → non-interactive. */
+function StageLinkRow({
+  state,
+  label,
+  summary,
+  href,
+}: {
+  state: StageState;
+  label: string;
+  summary: string;
+  href: string;
+}) {
+  if (state === "locked") {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-dashed px-4 py-3">
+        <RowInner state={state} label={label} summary={summary} />
+      </div>
+    );
+  }
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-      <Lock className="size-4 shrink-0" aria-hidden="true" />
-      {children}
-    </div>
+    <Link
+      href={href}
+      className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-muted/50"
+    >
+      <RowInner state={state} label={label} summary={summary} />
+      <span className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
+        Open
+        <ArrowRight className="size-4" aria-hidden="true" />
+      </span>
+    </Link>
   );
 }
 
@@ -78,11 +112,6 @@ export default async function FeaturePage({
   ]);
   if (!project || !feature || feature.projectId !== project.id) notFound();
 
-  const repo =
-    project.mode === "existing_system"
-      ? await getRepoByProjectId(project.id)
-      : null;
-
   const questions = feature.questions
     ? QuestionListSchema.parse(feature.questions)
     : null;
@@ -99,72 +128,60 @@ export default async function FeaturePage({
   const hasAnswers = !!answers && answers.length > 0;
   const hasSpec = !!spec;
   const hasPlan = !!plan;
-  // approvedAt persists through PLAN_GENERATED (only re-running the spec clears
-  // it), so it — not the status enum — is the durable "spec approved" signal.
   const isApproved = !!feature.approvedAt;
-
   const editingAnswers = edit === "answers";
 
-  const existingPaths = new Set(
-    repo?.fileTree?.entries
-      .filter((e) => e.type === "file")
-      .map((e) => e.path) ?? [],
-  );
-  const scaffoldableCount = plan ? countScaffoldable(plan, existingPaths) : 0;
-  const generatable = plan
-    ? countGeneratable(plan, existingPaths)
-    : { creatable: 0, modifiable: 0, total: 0 };
+  const versionCount = await countSpecVersionsByFeatureId(feature.id);
 
-  const fileCount =
-    repo?.fileTree?.entries.filter((e) => e.type === "file").length ?? 0;
-
-  const [docs, versionCount] = await Promise.all([
-    listContextDocsByProjectId(project.id),
-    countSpecVersionsByFeatureId(feature.id),
-  ]);
+  const hubHref = `/projects/${project.id}/features/${feature.id}`;
 
   const showAnswerForm =
     hasQuestions &&
     (feature.status === "QUESTIONS_GENERATED" || editingAnswers);
-  const showAnsweredView = hasQuestions && hasAnswers && !editingAnswers;
 
-  // Best-effort PR status (open/merged/closed). Cached 5s in-process.
-  let prStatus: PrStatus | null = null;
-  if (feature.prUrl && repo) {
-    const encrypted = await getEncryptedTokenForProject(project.id);
-    if (encrypted) {
-      try {
-        prStatus = await fetchPrStatus(feature.prUrl, decryptToken(encrypted));
-      } catch (err) {
-        console.error("[FeaturePage] PR status fetch failed:", err);
-      }
-    }
-  }
+  // Stage states + one-line summaries for the map.
+  const qaState: StageState = hasAnswers ? "done" : "active";
+  const qaSummary = !hasQuestions
+    ? "Not started — generate clarifying questions"
+    : hasAnswers
+      ? `${questions.length} questions · answered${feature.transcript ? " · from transcript" : ""}`
+      : `${questions.length} questions · awaiting answers`;
 
-  const stages: Stage[] = [
-    { id: "idea", label: "Idea", state: "done" },
-    { id: "questions", label: "Q&A", state: hasAnswers ? "done" : "active" },
-    {
-      id: "spec",
-      label: "Spec",
-      state: !hasAnswers ? "locked" : hasSpec ? "done" : "active",
-    },
-    {
-      id: "plan",
-      label: "Plan",
-      state: !isApproved ? "locked" : hasPlan ? "done" : "active",
-    },
-  ];
-  if (project.mode === "existing_system") {
-    stages.push({
-      id: "pr",
-      label: "PR",
-      state: !hasPlan ? "locked" : feature.prUrl ? "done" : "active",
-    });
-  }
+  const specState: StageState = !hasAnswers
+    ? "locked"
+    : hasSpec
+      ? "done"
+      : "active";
+  const specSummary = !hasAnswers
+    ? "Answer the questions first"
+    : hasSpec && spec
+      ? `${spec.acceptanceCriteria.length} acceptance criteria${isApproved ? " · approved" : ""}${versionCount > 0 ? ` · v${versionCount}` : ""}`
+      : "Not generated yet";
+
+  const planState: StageState = !isApproved
+    ? "locked"
+    : hasPlan
+      ? "done"
+      : "active";
+  const planSummary = !isApproved
+    ? "Approve the spec first"
+    : hasPlan && plan
+      ? `${plan.fileChanges.length} file changes · ${plan.affectedAreas.join(", ")}`
+      : "Not generated yet";
+
+  const prState: StageState = !hasPlan
+    ? "locked"
+    : feature.prUrl
+      ? "done"
+      : "active";
+  const prSummary = !hasPlan
+    ? "Generate a plan first"
+    : feature.prUrl
+      ? "Pull request opened"
+      : "Ready to open";
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div className="mx-auto max-w-3xl space-y-5">
       <div className="space-y-3">
         <Link
           href={`/projects/${project.id}`}
@@ -182,296 +199,121 @@ export default async function FeaturePage({
         </div>
       </div>
 
-      <FeatureStepper stages={stages} />
-
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_260px]">
-        <div className="space-y-10">
-          <section id="idea" className="scroll-mt-20 space-y-3">
-            <SectionHeading>Idea</SectionHeading>
-            <p className="whitespace-pre-wrap rounded-lg border bg-card p-4 text-sm">
-              {feature.idea}
-            </p>
-            {transcriptContext ? (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  Distilled from the refinement transcript — fed into every
-                  downstream step.
-                </p>
-                <TranscriptContextView context={transcriptContext} />
-              </div>
-            ) : null}
-          </section>
-
-          <section id="questions" className="scroll-mt-20 space-y-3">
-            <SectionHeading>Clarifying questions</SectionHeading>
-
-            {!hasQuestions ? (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  No questions yet — generate them below.
-                </p>
-                <GenerateQuestionsButton
-                  featureId={feature.id}
-                  hasQuestions={false}
-                />
-              </>
-            ) : showAnswerForm ? (
-              <>
-                <AnswerForm
-                  featureId={feature.id}
-                  questions={questions}
-                  initialAnswers={answers ?? []}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Regenerating questions will clear your answers.
-                </p>
-                <GenerateQuestionsButton featureId={feature.id} hasQuestions />
-              </>
-            ) : null}
-
-            {showAnsweredView ? (
-              <>
-                <ol className="space-y-4 rounded-lg border bg-card p-4 text-sm">
-                  {questions.map((q, i) => {
-                    const a = answers.find((x) => x.questionId === q.id);
-                    return (
-                      <li key={q.id} className="space-y-1">
-                        <div className="flex gap-3">
-                          <span className="font-mono text-muted-foreground">
-                            {i + 1}.
-                          </span>
-                          <span className="font-medium">{q.text}</span>
-                        </div>
-                        <p className="ml-6 whitespace-pre-wrap text-foreground/80">
-                          {a ? (
-                            a.text
-                          ) : (
-                            <span className="italic text-muted-foreground">
-                              no answer
-                            </span>
-                          )}
-                        </p>
-                      </li>
-                    );
-                  })}
-                </ol>
-                <div className="flex items-center gap-3">
-                  <Link
-                    href={`/projects/${project.id}/features/${feature.id}?edit=answers`}
-                    className="text-sm text-muted-foreground underline transition-colors hover:text-foreground"
-                  >
-                    Edit answers
-                  </Link>
-                  <span className="text-muted-foreground/40">·</span>
-                  <GenerateQuestionsButton featureId={feature.id} hasQuestions />
-                </div>
-              </>
-            ) : null}
-          </section>
-
-          <section id="spec" className="scroll-mt-20 space-y-3">
-            <SectionHeading>Feature spec</SectionHeading>
-            {!hasAnswers ? (
-              <LockedNote>Answer the questions to generate a spec.</LockedNote>
-            ) : (
-              <Link
-                href={`/projects/${project.id}/features/${feature.id}/spec`}
-                className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
-              >
-                <div className="min-w-0 space-y-1">
-                  {hasSpec && spec ? (
-                    <>
-                      <div className="font-medium">{spec.title}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {spec.acceptanceCriteria.length} acceptance criteria
-                        {isApproved ? " · approved" : ""}
-                        {versionCount > 0 ? ` · v${versionCount}` : ""}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="font-medium">No spec yet</div>
-                      <div className="text-sm text-muted-foreground">
-                        Open the spec workspace to generate it.
-                      </div>
-                    </>
-                  )}
-                </div>
-                <span className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
-                  Open
-                  <ArrowRight className="size-4" aria-hidden="true" />
-                </span>
-              </Link>
-            )}
-          </section>
-
-          <section id="plan" className="scroll-mt-20 space-y-3">
-            <SectionHeading>Implementation plan</SectionHeading>
-            {!isApproved ? (
-              <LockedNote>Approve the spec to generate a plan.</LockedNote>
-            ) : (
-              <>
-                {hasPlan ? <PlanView plan={plan} /> : null}
-                <GeneratePlanButton featureId={feature.id} hasPlan={hasPlan} />
-                {hasPlan ? (
-                  <p className="text-xs text-muted-foreground">
-                    Regenerating the plan overwrites the current one.
-                  </p>
-                ) : null}
-              </>
-            )}
-          </section>
-
-          {project.mode === "existing_system" ? (
-            <section id="pr" className="scroll-mt-20 space-y-3">
-              <SectionHeading>Pull request</SectionHeading>
-              {!hasPlan ? (
-                <LockedNote>
-                  Generate a plan to open a pull request.
-                </LockedNote>
-              ) : (
-                <>
-                  {feature.prUrl ? (
-                    <div className="space-y-1 text-sm">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <PrStatusBadge status={prStatus} />
-                        <a
-                          href={feature.prUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline transition-colors hover:text-foreground"
-                        >
-                          {feature.prUrl}
-                        </a>
-                      </div>
-                      {feature.prCreatedAt ? (
-                        <div className="text-xs text-muted-foreground">
-                          Opened{" "}
-                          {feature.prCreatedAt.toLocaleString(undefined, {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  <CreatePrForm
-                    featureId={feature.id}
-                    defaultSpecPath={project.specPath}
-                    defaultPlanPath={project.planPath}
-                    hasExistingPr={!!feature.prUrl}
-                    scaffoldableCount={scaffoldableCount}
-                    generatableCreate={generatable.creatable}
-                    generatableModify={generatable.modifiable}
-                  />
-                </>
-              )}
-            </section>
+      <div className="space-y-2">
+        <CollapsibleStage
+          label="Idea"
+          summary={feature.idea}
+          icon={<StageIcon state="done" />}
+        >
+          <p className="whitespace-pre-wrap text-sm">{feature.idea}</p>
+          {transcriptContext ? (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Distilled from the refinement transcript — fed into every
+                downstream step.
+              </p>
+              <TranscriptContextView context={transcriptContext} />
+            </div>
           ) : null}
+        </CollapsibleStage>
 
-          <section className="space-y-3 border-t pt-6">
-            <SectionHeading>Export</SectionHeading>
-            <ExportButtons featureId={feature.id} />
-          </section>
-        </div>
-
-        <aside className="space-y-4 lg:sticky lg:top-14 lg:self-start">
-          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            Sources
-          </div>
-          <ul className="space-y-3 text-sm">
-            {project.mode === "existing_system" ? (
-              <li className="flex items-start gap-2">
-                <FolderGit2
-                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                {repo ? (
-                  <span>
-                    <span className="font-medium">
-                      {repo.owner}/{repo.repo}
-                    </span>
-                    <span className="block text-xs text-muted-foreground">
-                      {fileCount} files indexed
-                    </span>
-                  </span>
-                ) : (
-                  <Link
-                    href={`/projects/${project.id}`}
-                    className="text-muted-foreground underline hover:text-foreground"
-                  >
-                    Connect a repo
-                  </Link>
-                )}
-              </li>
-            ) : null}
-
-            <li className="flex items-start gap-2">
-              <FileText
-                className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                aria-hidden="true"
+        <CollapsibleStage
+          label="Q&A"
+          summary={qaSummary}
+          icon={<StageIcon state={qaState} />}
+          defaultOpen={!hasAnswers || editingAnswers}
+        >
+          {!hasQuestions ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                No questions yet — generate them below.
+              </p>
+              <GenerateQuestionsButton
+                featureId={feature.id}
+                hasQuestions={false}
               />
-              <Link
-                href={`/projects/${project.id}`}
-                className="hover:text-foreground"
-              >
-                {docs.length > 0
-                  ? `${docs.length} context doc${docs.length === 1 ? "" : "s"}`
-                  : "No context docs"}
-              </Link>
-            </li>
-
-            {feature.transcript ? (
-              <li className="flex items-start gap-2">
-                <Mic
-                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <a href="#idea" className="hover:text-foreground">
-                  From transcript
-                </a>
-              </li>
-            ) : null}
-
-            {versionCount > 0 ? (
-              <li className="flex items-start gap-2">
-                <History
-                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
+            </>
+          ) : showAnswerForm ? (
+            <>
+              <AnswerForm
+                featureId={feature.id}
+                questions={questions}
+                initialAnswers={answers ?? []}
+              />
+              <p className="text-xs text-muted-foreground">
+                Regenerating questions will clear your answers.
+              </p>
+              <GenerateQuestionsButton featureId={feature.id} hasQuestions />
+            </>
+          ) : (
+            <>
+              <ol className="space-y-4 text-sm">
+                {questions.map((q, i) => {
+                  const a = answers?.find((x) => x.questionId === q.id);
+                  return (
+                    <li key={q.id} className="space-y-1">
+                      <div className="flex gap-3">
+                        <span className="font-mono text-muted-foreground">
+                          {i + 1}.
+                        </span>
+                        <span className="font-medium">{q.text}</span>
+                      </div>
+                      <p className="ml-6 whitespace-pre-wrap text-foreground/80">
+                        {a ? (
+                          a.text
+                        ) : (
+                          <span className="italic text-muted-foreground">
+                            no answer
+                          </span>
+                        )}
+                      </p>
+                    </li>
+                  );
+                })}
+              </ol>
+              <div className="flex items-center gap-3">
                 <Link
-                  href={`/projects/${project.id}/features/${feature.id}/history`}
-                  className="hover:text-foreground"
+                  href={`${hubHref}?edit=answers`}
+                  className="text-sm text-muted-foreground underline transition-colors hover:text-foreground"
                 >
-                  {versionCount} spec version{versionCount === 1 ? "" : "s"}
+                  Edit answers
                 </Link>
-              </li>
-            ) : null}
+                <span className="text-muted-foreground/40">·</span>
+                <GenerateQuestionsButton featureId={feature.id} hasQuestions />
+              </div>
+            </>
+          )}
+        </CollapsibleStage>
 
-            {project.mode === "existing_system" ? (
-              <li className="flex items-start gap-2">
-                <GitPullRequest
-                  className="mt-0.5 size-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                {feature.prUrl ? (
-                  <a
-                    href={feature.prUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-foreground"
-                  >
-                    View PR
-                  </a>
-                ) : (
-                  <a href="#pr" className="text-muted-foreground hover:text-foreground">
-                    No PR yet
-                  </a>
-                )}
-              </li>
-            ) : null}
-          </ul>
-        </aside>
+        <StageLinkRow
+          state={specState}
+          label="Spec"
+          summary={specSummary}
+          href={`${hubHref}/spec`}
+        />
+
+        <StageLinkRow
+          state={planState}
+          label="Plan"
+          summary={planSummary}
+          href={`${hubHref}/plan`}
+        />
+
+        {project.mode === "existing_system" ? (
+          <StageLinkRow
+            state={prState}
+            label="PR"
+            summary={prSummary}
+            href={`${hubHref}/plan`}
+          />
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
+        <span className="text-sm text-muted-foreground">
+          Export this feature
+        </span>
+        <ExportButtons featureId={feature.id} />
       </div>
     </div>
   );
