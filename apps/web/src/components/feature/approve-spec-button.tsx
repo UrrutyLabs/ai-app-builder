@@ -1,11 +1,13 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { approveSpecAction } from "@/app/_actions/spec";
 
 export function ApproveSpecButton({ featureId }: { featureId: string }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const handleClick = () => {
@@ -16,6 +18,7 @@ export function ApproveSpecButton({ featureId }: { featureId: string }) {
         return;
       }
       toast.success("Spec approved");
+      router.refresh();
     });
   };
 

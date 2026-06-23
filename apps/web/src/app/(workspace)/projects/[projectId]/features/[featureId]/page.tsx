@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  ArrowRight,
   FileText,
   FolderGit2,
   GitPullRequest,
@@ -31,10 +32,6 @@ import {
 } from "@repo/domain/schemas";
 import { GenerateQuestionsButton } from "@/components/feature/generate-questions-button";
 import { AnswerForm } from "@/components/feature/answer-form";
-import { GenerateSpecButton } from "@/components/feature/generate-spec-button";
-import { SpecView } from "@/components/feature/spec-view";
-import { SpecEditor } from "@/components/feature/spec-editor";
-import { ApproveSpecButton } from "@/components/feature/approve-spec-button";
 import { GeneratePlanButton } from "@/components/feature/generate-plan-button";
 import { PlanView } from "@/components/feature/plan-view";
 import { ExportButtons } from "@/components/feature/export-buttons";
@@ -42,7 +39,6 @@ import { CreatePrForm } from "@/components/feature/create-pr-form";
 import { TranscriptContextView } from "@/components/feature/transcript-context-view";
 import { parseTranscriptContext } from "@/lib/transcript-context";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import {
   FeatureStepper,
   type Stage,
@@ -108,29 +104,6 @@ export default async function FeaturePage({
   const isApproved = !!feature.approvedAt;
 
   const editingAnswers = edit === "answers";
-  const editingSpec = edit === "spec" && hasSpec;
-
-  // Focused editing view — drop the pipeline chrome to keep the editor central.
-  if (editingSpec && spec) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div>
-          <Link
-            href={`/projects/${project.id}/features/${feature.id}`}
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            ← {feature.title}
-          </Link>
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Edit spec</h1>
-        <SpecEditor
-          featureId={feature.id}
-          projectId={project.id}
-          spec={spec}
-        />
-      </div>
-    );
-  }
 
   const existingPaths = new Set(
     repo?.fileTree?.entries
@@ -301,38 +274,34 @@ export default async function FeaturePage({
             {!hasAnswers ? (
               <LockedNote>Answer the questions to generate a spec.</LockedNote>
             ) : (
-              <>
-                {hasSpec ? <SpecView spec={spec} /> : null}
-                {isApproved && feature.approvedAt ? (
-                  <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                    ✓ Approved on{" "}
-                    {feature.approvedAt.toLocaleString(undefined, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    })}
-                  </p>
-                ) : null}
-                <div className="flex flex-wrap items-center gap-3">
-                  <GenerateSpecButton featureId={feature.id} hasSpec={hasSpec} />
-                  {hasSpec ? (
-                    <Link
-                      href={`/projects/${project.id}/features/${feature.id}?edit=spec`}
-                      className={buttonVariants({ variant: "outline" })}
-                    >
-                      Edit spec
-                    </Link>
-                  ) : null}
-                  {hasSpec && !isApproved ? (
-                    <ApproveSpecButton featureId={feature.id} />
-                  ) : null}
+              <Link
+                href={`/projects/${project.id}/features/${feature.id}/spec`}
+                className="flex items-center justify-between gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50"
+              >
+                <div className="min-w-0 space-y-1">
+                  {hasSpec && spec ? (
+                    <>
+                      <div className="font-medium">{spec.title}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {spec.acceptanceCriteria.length} acceptance criteria
+                        {isApproved ? " · approved" : ""}
+                        {versionCount > 0 ? ` · v${versionCount}` : ""}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-medium">No spec yet</div>
+                      <div className="text-sm text-muted-foreground">
+                        Open the spec workspace to generate it.
+                      </div>
+                    </>
+                  )}
                 </div>
-                {hasSpec ? (
-                  <p className="text-xs text-muted-foreground">
-                    Regenerating or editing the spec clears approval and any
-                    implementation plan.
-                  </p>
-                ) : null}
-              </>
+                <span className="flex shrink-0 items-center gap-1 text-sm text-muted-foreground">
+                  Open
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </span>
+              </Link>
             )}
           </section>
 

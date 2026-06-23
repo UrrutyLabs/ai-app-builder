@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -107,11 +108,17 @@ export function SpecEditor({
   featureId,
   projectId,
   spec,
+  returnHref,
 }: {
   featureId: string;
   projectId: string;
   spec: FeatureSpec;
+  /** Where Cancel/Save return to. Defaults to the feature hub. */
+  returnHref?: string;
 }) {
+  const router = useRouter();
+  const destination =
+    returnHref ?? `/projects/${projectId}/features/${featureId}`;
   const {
     register,
     handleSubmit,
@@ -126,7 +133,13 @@ export function SpecEditor({
       featureId,
       spec: formValuesToSpec(values),
     });
-    if (result && !result.ok) toast.error(result.error.message);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    toast.success("Spec saved");
+    router.push(destination);
+    router.refresh();
   });
 
   const linesHint = "One item per line. Empty lines are ignored.";
@@ -217,7 +230,7 @@ export function SpecEditor({
 
       <div className="flex justify-end gap-3">
         <Link
-          href={`/projects/${projectId}/features/${featureId}`}
+          href={destination}
           className={buttonVariants({ variant: "outline" })}
         >
           Cancel

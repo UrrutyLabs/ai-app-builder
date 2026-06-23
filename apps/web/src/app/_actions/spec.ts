@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
   AnswerListSchema,
@@ -105,7 +104,6 @@ const SaveSpecInput = z.object({
 export async function saveSpecAction(
   raw: unknown,
 ): Promise<ActionResult<FeatureRecord>> {
-  let feature: FeatureRecord;
   try {
     const user = await requireUser();
     const input = SaveSpecInput.parse(raw);
@@ -113,12 +111,12 @@ export async function saveSpecAction(
     if (!existing) throw new NotFoundError(`Feature ${input.featureId} not found`);
     const project = await getProjectByIdForUser(existing.projectId, user.id);
     if (!project) throw new NotFoundError(`Project ${existing.projectId} not found`);
-    feature = await setFeatureSpec(input.featureId, input.spec);
+    const feature = await setFeatureSpec(input.featureId, input.spec);
     revalidatePath(`/projects/${feature.projectId}/features/${feature.id}`);
+    return { ok: true, data: feature };
   } catch (err) {
     return { ok: false, error: toActionError(err) };
   }
-  redirect(`/projects/${feature.projectId}/features/${feature.id}`);
 }
 
 export async function approveSpecAction(
