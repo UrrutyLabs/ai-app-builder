@@ -48,7 +48,7 @@ These rules come from working sessions and are load-bearing. Don't dump full imp
 - **Prompts live colocated with their step** under `packages/ai/src/steps/<step>/prompt.ts` as pure functions returning a string. Never inline in components or actions.
 - **Env access only through `@repo/domain/env`.** No `process.env.X` reads anywhere else. The env module validates at boot and throws on missing/invalid vars.
 - **JSON columns** (`questions`, `answers`, `spec`, `plan`) are validated through their Zod schema on read AND write. To clear them, use `Prisma.DbNull` (not bare `null`).
-- **Re-running a step discards downstream artifacts.** `setFeatureQuestions` clears `answers`/`spec`/`plan`/`approvedAt`; `setFeatureAnswers` clears `spec`/`plan`/`approvedAt`; `setFeatureSpec` clears `plan`/`approvedAt`. This is enforced in the repo functions, not the UI.
+- **Re-running an upstream step discards downstream artifacts.** `setFeatureQuestions` clears `answers`/`spec`/`plan`/`approvedAt`; `setFeatureAnswers` clears `spec`/`plan`/`approvedAt`. **Exception — spec edits keep the plan.** `setFeatureSpec` (every spec save, including per-section edits and restores) clears `approvedAt` and sets `planStale = true`, but does **not** delete the plan — so a small edit no longer destroys downstream work; you re-approve and optionally regenerate the now-stale plan. `setFeaturePlan` clears `planStale`. Enforced in the repo functions, not the UI.
 
 ## Forbidden patterns
 

@@ -82,6 +82,7 @@ model Feature {
   spec              Json?
   plan              Json?
   approvedAt        DateTime?
+  planStale         Boolean       @default(false)
   prUrl             String?
   prCreatedAt       DateTime?
   transcript        String?
@@ -96,6 +97,7 @@ model SpecVersion {
   featureId String
   feature   Feature  @relation(fields: [featureId], references: [id], onDelete: Cascade)
   spec      Json
+  note      String?
   createdAt DateTime @default(now())
 
   @@index([featureId, createdAt])

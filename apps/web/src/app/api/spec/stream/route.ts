@@ -134,7 +134,7 @@ export async function POST(req: Request): Promise<Response> {
 
         if (!finalSpec) throw new Error("Stream ended without a final spec");
 
-        await setFeatureSpec(featureId, finalSpec);
+        await setFeatureSpec(featureId, finalSpec, "Generated");
         revalidatePath(`/projects/${project.id}/features/${feature.id}`);
         send({ type: "complete", spec: finalSpec });
       } catch (err) {

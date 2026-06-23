@@ -31,6 +31,7 @@ export type FeatureRecord = {
   spec: Prisma.JsonValue | null;
   plan: Prisma.JsonValue | null;
   approvedAt: Date | null;
+  planStale: boolean;
   prUrl: string | null;
   prCreatedAt: Date | null;
   transcript: string | null;
@@ -50,6 +51,7 @@ const toRecord = (f: PrismaFeature): FeatureRecord => ({
   spec: f.spec,
   plan: f.plan,
   approvedAt: f.approvedAt,
+  planStale: f.planStale,
   prUrl: f.prUrl,
   prCreatedAt: f.prCreatedAt,
   transcript: f.transcript,
@@ -151,18 +153,22 @@ export async function setFeatureAnswers(
 export async function setFeatureSpec(
   featureId: string,
   spec: FeatureSpec,
+  note?: string,
 ): Promise<FeatureRecord> {
   const validated = FeatureSpecSchema.parse(spec);
   // Atomic: feature update + version snapshot. Each setFeatureSpec call adds
   // one row to SpecVersion (history of every save).
+  //
+  // Editing the spec keeps any generated plan but marks it stale and clears
+  // approval — so a small edit no longer destroys downstream work; you just
+  // re-approve (and optionally regenerate the now-stale plan). See CLAUDE.md.
   const [row] = await prisma.$transaction([
     prisma.feature.update({
       where: { id: featureId },
       data: {
         spec: validated as Prisma.InputJsonValue,
-        // Re-running spec invalidates plan + approval.
-        plan: PrismaNS.DbNull,
         approvedAt: null,
+        planStale: true,
         status: "SPEC_DRAFTED",
       },
     }),
@@ -170,6 +176,7 @@ export async function setFeatureSpec(
       data: {
         featureId,
         spec: validated as Prisma.InputJsonValue,
+        ...(note !== undefined ? { note } : {}),
       },
     }),
   ]);
@@ -198,6 +205,7 @@ export async function setFeaturePlan(
     where: { id: featureId },
     data: {
       plan: validated as Prisma.InputJsonValue,
+      planStale: false,
       status: "PLAN_GENERATED",
     },
   });

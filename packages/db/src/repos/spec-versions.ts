@@ -9,6 +9,7 @@ export type SpecVersionRecord = {
   id: string;
   featureId: string;
   spec: FeatureSpec;
+  note: string | null;
   createdAt: Date;
 };
 
@@ -16,8 +17,16 @@ const toRecord = (v: PrismaSpecVersion): SpecVersionRecord => ({
   id: v.id,
   featureId: v.featureId,
   spec: FeatureSpecSchema.parse(v.spec),
+  note: v.note,
   createdAt: v.createdAt,
 });
+
+export async function getSpecVersionById(
+  id: string,
+): Promise<SpecVersionRecord | null> {
+  const row = await prisma.specVersion.findUnique({ where: { id } });
+  return row ? toRecord(row) : null;
+}
 
 /**
  * Insert a new SpecVersion for a feature. Caller is responsible for ensuring

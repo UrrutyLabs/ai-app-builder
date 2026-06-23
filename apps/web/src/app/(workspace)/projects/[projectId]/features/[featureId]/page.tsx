@@ -166,7 +166,7 @@ export default async function FeaturePage({
   const planSummary = !isApproved
     ? "Approve the spec first"
     : hasPlan && plan
-      ? `${plan.fileChanges.length} file changes · ${plan.affectedAreas.join(", ")}`
+      ? `${plan.fileChanges.length} file changes${feature.planStale ? " · spec changed — may be stale" : ""}`
       : "Not generated yet";
 
   const prState: StageState = !hasPlan

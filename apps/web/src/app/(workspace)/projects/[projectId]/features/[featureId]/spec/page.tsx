@@ -1,19 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileText, FolderGit2, History, Lock, Mic } from "lucide-react";
+import { FileText, FolderGit2, Lock, Mic } from "lucide-react";
 import {
-  countSpecVersionsByFeatureId,
   getFeatureById,
   getProjectByIdForUser,
   getRepoByProjectId,
+  getSpecVersionById,
   listContextDocsByProjectId,
+  listSpecVersionsByFeatureId,
 } from "@repo/db";
 import { AnswerListSchema, FeatureSpecSchema } from "@repo/domain/schemas";
 import { getCurrentUser } from "@/lib/auth/server";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import { SpecView } from "@/components/feature/spec-view";
-import { SpecEditor } from "@/components/feature/spec-editor";
+import { SpecSections } from "@/components/feature/spec-sections";
+import { SpecVersions, type VersionItem } from "@/components/feature/spec-versions";
 import { GenerateSpecButton } from "@/components/feature/generate-spec-button";
 import { ApproveSpecButton } from "@/components/feature/approve-spec-button";
 
@@ -24,10 +25,10 @@ export default async function SpecWorkspacePage({
   searchParams,
 }: {
   params: Promise<{ projectId: string; featureId: string }>;
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{ version?: string }>;
 }) {
   const { projectId, featureId } = await params;
-  const { edit } = await searchParams;
+  const { version: viewingId } = await searchParams;
   const user = await getCurrentUser();
   if (!user) notFound();
   const [project, feature] = await Promise.all([
@@ -46,17 +47,38 @@ export default async function SpecWorkspacePage({
   const hasAnswers = !!answers && answers.length > 0;
   const hasSpec = !!spec;
   const isApproved = !!feature.approvedAt;
-  const editing = edit === "1" && hasSpec;
 
-  const [repo, docs, versionCount] = await Promise.all([
+  const [repo, docs, versions] = await Promise.all([
     project.mode === "existing_system"
       ? getRepoByProjectId(project.id)
       : Promise.resolve(null),
     listContextDocsByProjectId(project.id),
-    countSpecVersionsByFeatureId(feature.id),
+    listSpecVersionsByFeatureId(feature.id),
   ]);
   const fileCount =
     repo?.fileTree?.entries.filter((e) => e.type === "file").length ?? 0;
+
+  const versionItems: VersionItem[] = versions.map((v, i) => ({
+    id: v.id,
+    label: `v${versions.length - i}`,
+    note: v.note,
+    when: v.createdAt.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    }),
+    isCurrent: i === 0,
+  }));
+
+  // Viewing a past version read-only?
+  let viewing: { item: VersionItem; spec: ReturnType<typeof FeatureSpecSchema.parse> } | null =
+    null;
+  if (viewingId) {
+    const v = await getSpecVersionById(viewingId);
+    const item = versionItems.find((x) => x.id === viewingId);
+    if (v && v.featureId === feature.id && item) {
+      viewing = { item, spec: v.spec };
+    }
+  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -69,15 +91,19 @@ export default async function SpecWorkspacePage({
         </Link>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">Spec</h1>
-          {hasSpec ? (
-            <Badge variant="secondary">
-              v{Math.max(versionCount, 1)}
-            </Badge>
-          ) : null}
-          {isApproved ? (
-            <span className="text-sm text-emerald-700 dark:text-emerald-400">
-              ✓ Approved
-            </span>
+          {viewing ? (
+            <Badge variant="secondary">viewing {viewing.item.label}</Badge>
+          ) : hasSpec ? (
+            <>
+              <Badge variant="secondary">
+                {versionItems[0]?.label ?? "v1"}
+              </Badge>
+              {isApproved ? (
+                <span className="text-sm text-emerald-700 dark:text-emerald-400">
+                  ✓ Approved
+                </span>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>
@@ -90,72 +116,54 @@ export default async function SpecWorkspacePage({
             Go to questions
           </Link>
         </div>
-      ) : editing && spec ? (
-        <SpecEditor
-          featureId={feature.id}
-          projectId={project.id}
-          spec={spec}
-          returnHref={specHref}
-        />
       ) : (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_240px]">
           <div className="space-y-4">
-            {hasSpec ? (
-              <SpecView spec={spec} />
+            {viewing ? (
+              <>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-dashed p-3 text-sm">
+                  <span className="text-muted-foreground">
+                    Viewing {viewing.item.label} ({viewing.item.when}) —
+                    read-only.
+                  </span>
+                  <Link
+                    href={specHref}
+                    className="underline transition-colors hover:text-foreground"
+                  >
+                    Back to current
+                  </Link>
+                </div>
+                <SpecView spec={viewing.spec} />
+              </>
+            ) : hasSpec && spec ? (
+              <>
+                <SpecSections featureId={feature.id} spec={spec} />
+                <div className="flex flex-wrap items-center gap-3 border-t pt-4">
+                  <GenerateSpecButton featureId={feature.id} hasSpec />
+                  {!isApproved ? (
+                    <ApproveSpecButton featureId={feature.id} />
+                  ) : null}
+                </div>
+              </>
             ) : (
-              <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-                No spec yet. Generate one from the idea, Q&amp;A, and project
-                context.
-              </div>
+              <>
+                <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                  No spec yet. Generate one from the idea, Q&amp;A, and project
+                  context.
+                </div>
+                <GenerateSpecButton featureId={feature.id} hasSpec={false} />
+              </>
             )}
-
-            <div className="flex flex-wrap items-center gap-3">
-              <GenerateSpecButton featureId={feature.id} hasSpec={hasSpec} />
-              {hasSpec ? (
-                <Link
-                  href={`${specHref}?edit=1`}
-                  className={buttonVariants({ variant: "outline" })}
-                >
-                  Edit
-                </Link>
-              ) : null}
-              {hasSpec && !isApproved ? (
-                <ApproveSpecButton featureId={feature.id} />
-              ) : null}
-            </div>
-            {hasSpec ? (
-              <p className="text-xs text-muted-foreground">
-                Regenerating or editing the spec clears approval and any
-                implementation plan.
-              </p>
-            ) : null}
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-14 lg:self-start">
-            <div>
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Versions
-              </div>
-              <div className="mt-2 text-sm">
-                {versionCount > 0 ? (
-                  <Link
-                    href={`${hubHref}/history`}
-                    className="flex items-center gap-2 hover:text-foreground"
-                  >
-                    <History
-                      className="size-4 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    {versionCount} version{versionCount === 1 ? "" : "s"} —
-                    view history
-                  </Link>
-                ) : (
-                  <span className="text-muted-foreground">
-                    No versions yet
-                  </span>
-                )}
-              </div>
-            </div>
+            {versionItems.length > 0 ? (
+              <SpecVersions
+                featureId={feature.id}
+                versions={versionItems}
+                historyHref={`${hubHref}/history`}
+              />
+            ) : null}
 
             <div>
               <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

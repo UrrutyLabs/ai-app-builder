@@ -78,6 +78,12 @@ export default async function PlanWorkspacePage({
       ) : (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_220px]">
           <div className="space-y-4">
+            {hasPlan && feature.planStale ? (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                The spec changed since this plan was generated — it may be out of
+                date. Regenerate to refresh it.
+              </div>
+            ) : null}
             {hasPlan ? (
               <PlanView plan={plan} />
             ) : (

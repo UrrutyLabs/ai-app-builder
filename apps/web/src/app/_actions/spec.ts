@@ -19,6 +19,8 @@ import {
   getFeatureById,
   getProjectByIdForUser,
   getRepoByProjectId,
+  getSpecVersionById,
+  listSpecVersionsByFeatureId,
   setFeatureSpec,
   type FeatureRecord,
 } from "@repo/db";
@@ -88,7 +90,7 @@ export async function generateSpecAction(
       docsContext,
     });
 
-    const updated = await setFeatureSpec(featureId, spec);
+    const updated = await setFeatureSpec(featureId, spec, "Generated");
     revalidatePath(`/projects/${feature.projectId}/features/${feature.id}`);
     return { ok: true, data: updated };
   } catch (err) {
@@ -99,6 +101,8 @@ export async function generateSpecAction(
 const SaveSpecInput = z.object({
   featureId: z.string().min(1),
   spec: FeatureSpecSchema,
+  // Optional history label, e.g. "Edited Acceptance criteria".
+  note: z.string().min(1).max(120).optional(),
 });
 
 export async function saveSpecAction(
@@ -111,7 +115,46 @@ export async function saveSpecAction(
     if (!existing) throw new NotFoundError(`Feature ${input.featureId} not found`);
     const project = await getProjectByIdForUser(existing.projectId, user.id);
     if (!project) throw new NotFoundError(`Project ${existing.projectId} not found`);
-    const feature = await setFeatureSpec(input.featureId, input.spec);
+    const feature = await setFeatureSpec(input.featureId, input.spec, input.note);
+    revalidatePath(`/projects/${feature.projectId}/features/${feature.id}`);
+    return { ok: true, data: feature };
+  } catch (err) {
+    return { ok: false, error: toActionError(err) };
+  }
+}
+
+const RestoreSpecVersionInput = z.object({
+  featureId: z.string().min(1),
+  versionId: z.string().min(1),
+});
+
+export async function restoreSpecVersionAction(
+  raw: unknown,
+): Promise<ActionResult<FeatureRecord>> {
+  try {
+    const user = await requireUser();
+    const { featureId, versionId } = RestoreSpecVersionInput.parse(raw);
+    const existing = await getFeatureById(featureId);
+    if (!existing) throw new NotFoundError(`Feature ${featureId} not found`);
+    const project = await getProjectByIdForUser(existing.projectId, user.id);
+    if (!project) throw new NotFoundError(`Project ${existing.projectId} not found`);
+
+    const version = await getSpecVersionById(versionId);
+    if (!version || version.featureId !== featureId) {
+      throw new NotFoundError(`Spec version ${versionId} not found`);
+    }
+
+    // Label the new version with the restored version's number (1-based,
+    // oldest first), so history reads "Restored v2".
+    const versions = await listSpecVersionsByFeatureId(featureId);
+    const idx = versions.findIndex((v) => v.id === versionId);
+    const number = idx >= 0 ? versions.length - idx : 0;
+
+    const feature = await setFeatureSpec(
+      featureId,
+      version.spec,
+      number > 0 ? `Restored v${number}` : "Restored an earlier version",
+    );
     revalidatePath(`/projects/${feature.projectId}/features/${feature.id}`);
     return { ok: true, data: feature };
   } catch (err) {
