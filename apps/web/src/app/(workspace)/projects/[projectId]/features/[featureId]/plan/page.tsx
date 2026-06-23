@@ -2,22 +2,16 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FolderGit2, Lock } from "lucide-react";
 import {
-  getEncryptedTokenForProject,
   getFeatureById,
   getProjectByIdForUser,
   getRepoByProjectId,
 } from "@repo/db";
 import { ImplementationPlanSchema } from "@repo/domain/schemas";
-import { decryptToken } from "@repo/repos/server";
 import { getCurrentUser } from "@/lib/auth/server";
-import { countGeneratable, countScaffoldable } from "@/lib/scaffold-stubs";
-import { fetchPrStatus, type PrStatus } from "@/lib/pr-status";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { PlanView } from "@/components/feature/plan-view";
 import { GeneratePlanButton } from "@/components/feature/generate-plan-button";
-import { CreatePrForm } from "@/components/feature/create-pr-form";
-import { PrStatusBadge } from "@/components/feature/pr-status-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -47,29 +41,8 @@ export default async function PlanWorkspacePage({
     project.mode === "existing_system"
       ? await getRepoByProjectId(project.id)
       : null;
-  const existingPaths = new Set(
-    repo?.fileTree?.entries
-      .filter((e) => e.type === "file")
-      .map((e) => e.path) ?? [],
-  );
-  const scaffoldableCount = plan ? countScaffoldable(plan, existingPaths) : 0;
-  const generatable = plan
-    ? countGeneratable(plan, existingPaths)
-    : { creatable: 0, modifiable: 0, total: 0 };
   const fileCount =
     repo?.fileTree?.entries.filter((e) => e.type === "file").length ?? 0;
-
-  let prStatus: PrStatus | null = null;
-  if (feature.prUrl && repo) {
-    const encrypted = await getEncryptedTokenForProject(project.id);
-    if (encrypted) {
-      try {
-        prStatus = await fetchPrStatus(feature.prUrl, decryptToken(encrypted));
-      } catch (err) {
-        console.error("[PlanWorkspace] PR status fetch failed:", err);
-      }
-    }
-  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -81,9 +54,7 @@ export default async function PlanWorkspacePage({
           ← {feature.title}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Plan &amp; PR
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Plan</h1>
           {hasPlan ? (
             <Badge variant="secondary">
               {plan.fileChanges.length} file
@@ -106,66 +77,32 @@ export default async function PlanWorkspacePage({
         </div>
       ) : (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_220px]">
-          <div className="space-y-8">
-            <section className="space-y-3">
-              {hasPlan ? (
-                <PlanView plan={plan} />
-              ) : (
-                <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-                  No plan yet. Generate it from the approved spec.
-                </div>
-              )}
-              <GeneratePlanButton featureId={feature.id} hasPlan={hasPlan} />
-              {hasPlan ? (
-                <p className="text-xs text-muted-foreground">
-                  Regenerating the plan overwrites the current one.
-                </p>
-              ) : null}
-            </section>
-
-            {hasPlan && project.mode === "existing_system" ? (
-              <section className="space-y-3 border-t pt-6">
-                <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                  Pull request
-                </h2>
-                {feature.prUrl ? (
-                  <div className="space-y-1 text-sm">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <PrStatusBadge status={prStatus} />
-                      <a
-                        href={feature.prUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline transition-colors hover:text-foreground"
-                      >
-                        {feature.prUrl}
-                      </a>
-                    </div>
-                    {feature.prCreatedAt ? (
-                      <div className="text-xs text-muted-foreground">
-                        Opened{" "}
-                        {feature.prCreatedAt.toLocaleString(undefined, {
-                          dateStyle: "medium",
-                          timeStyle: "short",
-                        })}
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-                <CreatePrForm
-                  featureId={feature.id}
-                  defaultSpecPath={project.specPath}
-                  defaultPlanPath={project.planPath}
-                  hasExistingPr={!!feature.prUrl}
-                  scaffoldableCount={scaffoldableCount}
-                  generatableCreate={generatable.creatable}
-                  generatableModify={generatable.modifiable}
-                />
-              </section>
+          <div className="space-y-4">
+            {hasPlan ? (
+              <PlanView plan={plan} />
+            ) : (
+              <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
+                No plan yet. Generate it from the approved spec.
+              </div>
+            )}
+            <GeneratePlanButton featureId={feature.id} hasPlan={hasPlan} />
+            {hasPlan ? (
+              <p className="text-xs text-muted-foreground">
+                Regenerating the plan overwrites the current one.
+              </p>
             ) : null}
           </div>
 
           <aside className="space-y-5 lg:sticky lg:top-14 lg:self-start">
+            {hasPlan && project.mode === "existing_system" ? (
+              <Link
+                href={`${hubHref}/pr`}
+                className={buttonVariants({ size: "sm" })}
+              >
+                Open a pull request
+              </Link>
+            ) : null}
+
             <div>
               <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Grounded in

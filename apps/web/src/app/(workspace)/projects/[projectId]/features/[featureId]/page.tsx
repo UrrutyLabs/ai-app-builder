@@ -304,7 +304,7 @@ export default async function FeaturePage({
             state={prState}
             label="PR"
             summary={prSummary}
-            href={`${hubHref}/plan`}
+            href={`${hubHref}/pr`}
           />
         ) : null}
       </div>
