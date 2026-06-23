@@ -12,6 +12,7 @@ import {
 import { HeaderUserMenu } from "@/components/auth/header-user-menu";
 import { SidebarNav, type ProjectLite } from "./sidebar-nav";
 import { ProjectSwitcher } from "./project-switcher";
+import { ThemeToggle } from "./theme-toggle";
 
 export function AppHeader({ projects }: { projects: ProjectLite[] }) {
   const [open, setOpen] = useState(false);
@@ -37,7 +38,8 @@ export function AppHeader({ projects }: { projects: ProjectLite[] }) {
 
       <ProjectSwitcher projects={projects} />
 
-      <div className="ml-auto flex items-center">
+      <div className="ml-auto flex items-center gap-1">
+        <ThemeToggle />
         <HeaderUserMenu />
       </div>
     </header>
