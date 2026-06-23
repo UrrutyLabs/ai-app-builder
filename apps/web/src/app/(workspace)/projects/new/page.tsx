@@ -3,7 +3,7 @@ import { NewProjectForm } from "@/components/forms/new-project-form";
 
 export default function NewProjectPage() {
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <Link
           href="/"

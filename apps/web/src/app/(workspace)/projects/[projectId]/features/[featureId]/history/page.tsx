@@ -28,7 +28,7 @@ export default async function FeatureHistoryPage({
   const versions = await listSpecVersionsByFeatureId(featureId);
 
   return (
-    <div className="space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8">
       <div>
         <Link
           href={`/projects/${project.id}/features/${feature.id}`}

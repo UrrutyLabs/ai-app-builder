@@ -18,7 +18,7 @@ export default async function NewFeaturePage({
   if (!project) notFound();
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div>
         <Link
           href={`/projects/${project.id}`}

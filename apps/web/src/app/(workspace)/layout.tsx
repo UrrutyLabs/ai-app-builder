@@ -29,9 +29,7 @@ export default async function WorkspaceLayout({
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <AppHeader projects={projects} />
-          <main className="flex-1 px-6 py-8">
-            <div className="mx-auto max-w-4xl">{children}</div>
-          </main>
+          <main className="flex-1 px-6 py-8">{children}</main>
         </div>
       </div>
     </TooltipProvider>

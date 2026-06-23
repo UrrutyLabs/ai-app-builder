@@ -17,13 +17,9 @@ export function ContextDocsSection({
 }) {
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-        Context documents
-      </h2>
-      <p className="text-sm text-muted-foreground">
-        Attach PRDs, domain models, or notes. They&apos;re indexed and fed into
-        clarifying questions and spec generation for every feature in this
-        project.
+      <div className="text-sm font-medium">Context documents</div>
+      <p className="text-xs text-muted-foreground">
+        PRDs, domain models, or notes — indexed and fed into every feature.
       </p>
 
       {docs.length > 0 ? (
