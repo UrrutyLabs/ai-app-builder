@@ -4,6 +4,8 @@ export interface GenerateQuestionsInput {
   repoContext?: string | null;
   conventionsContext?: string | null;
   codeContext?: string | null;
+  transcriptContext?: string | null;
+  docsContext?: string | null;
 }
 
 export const SYSTEM_PROMPT = `You are an expert product engineer helping a teammate translate a vague feature idea into a structured spec.
@@ -32,13 +34,19 @@ export function buildUserPrompt(input: GenerateQuestionsInput): string {
   const codeBlock = input.codeContext
     ? `\n\n${input.codeContext}\n`
     : "";
+  const transcriptBlock = input.transcriptContext
+    ? `\n\n${input.transcriptContext}\n\nThe idea above was distilled from this transcript. Decisions are settled; do NOT re-ask them. The openQuestions above are great seeds — incorporate them.`
+    : "";
+  const docsBlock = input.docsContext
+    ? `\n\n${input.docsContext}\n`
+    : "";
 
   return `Mode: ${modeContext}
 
 Feature idea (raw, from a teammate):
 """
 ${input.idea}
-"""${repoBlock}${conventionsBlock}${codeBlock}
+"""${transcriptBlock}${docsBlock}${repoBlock}${conventionsBlock}${codeBlock}
 
 Produce 5–8 clarifying questions using the \`record_questions\` tool.`;
 }

@@ -2,7 +2,7 @@
 
 > The single source of truth for how this system is structured. Any code we write must conform to this document. If reality and this document disagree, we update one of them — never silently drift.
 >
-> **Reconciled against the codebase on 2026-06-22.** This document originally described an export-only "v0.1." The system has since shipped auth + multi-tenancy, GitHub repo grounding, code generation, and PR creation. The text below reflects what is actually built. The forward plan lives in `roadmap.md`; the product north star lives in `Vision.md`.
+> **Reconciled against the codebase on 2026-06-23.** This document originally described an export-only "v0.1." The system has since shipped auth + multi-tenancy, GitHub repo grounding, code generation, PR creation, streaming spec generation, **meeting-transcript ingestion**, and **project context documents**. The text below reflects what is actually built. The forward plan lives in `roadmap.md`; the product north star lives in `Vision.md`.
 
 ## 1. Product, in one sentence
 
@@ -16,18 +16,19 @@ Shipped and in the repo today:
 
 1. Create a project (`greenfield` or `existing_system`), scoped to the signed-in user.
 2. Connect a GitHub repo to a project: fetch the file tree, infer conventions, embed files into a vector index.
-3. Enter a vague feature idea.
-4. AI generates clarifying questions, grounded in the connected repo when present.
-5. User answers questions.
-6. AI generates a structured `FeatureSpec` (streamed as it materializes).
-7. User edits and approves the spec. Every save is versioned; a diff view shows what changed between versions.
-8. AI generates an `ImplementationPlan` (steps grouped by area, file changes, test plan, risks).
-9. Export spec + plan as JSON or Markdown.
-10. Create a pull request in one of three modes: **doc-only** (writes spec/plan markdown), **stubs** (scaffolds the files from `plan.fileChanges`), or **generate** (writes real implementations via the codegen loop). PR status syncs back onto the feature page.
+3. Attach **context documents** (PRD, domain model, notes) to a project: paste or upload `.md`/`.txt`, chunked and embedded into a vector index alongside the repo.
+4. Start a feature two ways: type a vague idea, **or paste a refinement-meeting transcript** that the AI distills into a title, idea, and supporting context (decisions / constraints / open questions) for human review.
+5. AI generates clarifying questions, grounded in the connected repo, attached docs, and any transcript context.
+6. User answers questions.
+7. AI generates a structured `FeatureSpec` (streamed as it materializes), grounded in the same sources.
+8. User edits and approves the spec. Every save is versioned; a diff view shows what changed between versions.
+9. AI generates an `ImplementationPlan` (steps grouped by area, file changes, test plan, risks).
+10. Export spec + plan as JSON or Markdown.
+11. Create a pull request in one of three modes: **doc-only** (writes spec/plan markdown), **stubs** (scaffolds the files from `plan.fileChanges`), or **generate** (writes real implementations via the codegen loop). PR status syncs back onto the feature page.
 
 Authentication (Neon Auth) and multi-tenancy (`Project.userId` scoping) are live.
 
-Still deferred (see `roadmap.md` for sequencing): per-section spec comments, real-time multiplayer editing, outcome/drift tracking, multi-LLM provider abstraction, org-level prompt customization, Figma/Notion ingestion, and **meeting-transcript ingestion** (the highest-value gap vs. the `Vision.md` wedge — input today is a typed idea, not a refinement transcript).
+Still deferred (see `roadmap.md` for sequencing): per-section spec comments, real-time multiplayer editing, outcome/drift tracking, multi-LLM provider abstraction, org-level prompt customization, Figma/Notion ingestion, feature-scoped context docs, and binary (PDF/DOCX) document ingestion.
 
 ## 3. Modes
 
@@ -36,17 +37,19 @@ Two modes, persisted on the `Project`:
 - `greenfield` — new project, no existing code constraints.
 - `existing_system` — feature on an existing codebase.
 
-The mode is passed into prompts so the LLM adjusts phrasing. In `existing_system` mode with a connected repo, the difference is now substantive, not cosmetic: clarifying questions, spec generation, and code generation all retrieve relevant file snippets and inferred conventions from the repo index (see §10).
+The mode is passed into prompts so the LLM adjusts phrasing. In `existing_system` mode with a connected repo, the difference is now substantive, not cosmetic: clarifying questions, spec generation, and code generation all retrieve relevant file snippets and inferred conventions from the repo index (see §10). Project context documents are retrieved the same way and apply in both modes — greenfield projects benefit from attached PRDs / domain models even without a repo.
 
 ## 4. End-to-end flow
 
 ```
 Dashboard
   └─ Project (mode, userId, optional Repo)
-       └─ Repo (file tree, inferred conventions, file embeddings)   [optional]
+       └─ Repo (file tree, inferred conventions, file embeddings)        [optional]
+       └─ ProjectContextDoc[] (PRD / domain / notes, chunked + embedded)  [optional]
        └─ Feature
-            ├─ idea: string                       (user input)
-            ├─ questions: Question[]              (LLM step 1, repo-grounded)
+            ├─ idea: string                       (user input, OR distilled from a transcript)
+            ├─ transcript, transcriptContext      (optional; decisions/constraints/openQuestions)
+            ├─ questions: Question[]              (LLM step 1, grounded in repo + docs + transcript)
             ├─ answers: Answer[]                  (user input)
             ├─ spec: FeatureSpec                  (LLM step 2, streamed; draft → approved)
             │    └─ SpecVersion[]                 (one per save, with diff view)
@@ -54,6 +57,8 @@ Dashboard
             └─ pull request                       (doc-only | stubs | generate)
                  └─ prUrl, prCreatedAt persisted on Feature
 ```
+
+A feature can be seeded either from a typed idea or from a pasted refinement transcript; the transcript path runs an extra `extract-from-transcript` LLM step first, then lands in the same pipeline. Project context documents and the connected repo are both retrieved into the question/spec/transcript-extraction prompts via a single unified retrieval helper (`retrieveProjectContext`).
 
 State machine on `Feature.status`:
 
@@ -161,6 +166,7 @@ model Project {
   updatedAt   DateTime  @updatedAt
   features    Feature[]
   repo        Repo?
+  contextDocs ProjectContextDoc[]
   @@index([userId])
 }
 
@@ -193,22 +199,24 @@ model RepoFileEmbedding {
 }
 
 model Feature {
-  id           String        @id @default(cuid())
-  projectId    String
-  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  title        String
-  idea         String
-  status       FeatureStatus @default(DRAFT)
-  questions    Json?         // Question[]
-  answers      Json?         // Answer[]
-  spec         Json?         // FeatureSpec
-  plan         Json?         // ImplementationPlan
-  approvedAt   DateTime?
-  prUrl        String?
-  prCreatedAt  DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  specVersions SpecVersion[]
+  id                String        @id @default(cuid())
+  projectId         String
+  project           Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title             String
+  idea              String
+  status            FeatureStatus @default(DRAFT)
+  questions         Json?         // Question[]
+  answers           Json?         // Answer[]
+  spec              Json?         // FeatureSpec
+  plan              Json?         // ImplementationPlan
+  approvedAt        DateTime?
+  prUrl             String?
+  prCreatedAt       DateTime?
+  transcript        String?       // raw pasted refinement transcript (optional)
+  transcriptContext Json?         // TranscriptContext: decisions/constraints/openQuestions
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  specVersions      SpecVersion[]
 }
 
 model SpecVersion {
@@ -218,6 +226,32 @@ model SpecVersion {
   spec      Json
   createdAt DateTime @default(now())
   @@index([featureId, createdAt])
+}
+
+model ProjectContextDoc {
+  id         String                       @id @default(cuid())
+  projectId  String
+  project    Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title      String
+  content    String                       // full text, kept for re-embedding
+  mimeType   String                       // "text/markdown" | "text/plain" (v1)
+  byteLength Int
+  createdAt  DateTime                     @default(now())
+  updatedAt  DateTime                     @updatedAt
+  embeddings ProjectContextDocEmbedding[]
+  @@index([projectId])
+}
+
+model ProjectContextDocEmbedding {
+  id        String                      @id @default(cuid())
+  docId     String
+  doc       ProjectContextDoc           @relation(fields: [docId], references: [id], onDelete: Cascade)
+  chunkIx   Int
+  content   String                      // the chunk's text (injected into prompts)
+  embedding Unsupported("vector(1536)") // pgvector
+  updatedAt DateTime                    @default(now())
+  @@unique([docId, chunkIx])
+  @@index([docId])
 }
 
 enum Mode          { GREENFIELD EXISTING_SYSTEM }
@@ -307,15 +341,21 @@ Override per env var for local experimentation. **`temperature` is omitted for t
 
 **No prompts in UI code.** Every prompt is a pure function in `packages/ai/src/steps/<step>/prompt.ts`, snapshot-tested for stability.
 
-## 10. Repo grounding & retrieval
+## 10. Grounding & retrieval
 
-When a repo is connected (`existing_system`), `connectRepoAction`:
+The system grounds generation in three kinds of context: the connected repo, attached project documents, and (per feature) a refinement transcript.
+
+**Repo.** When a repo is connected (`existing_system`), `connectRepoAction`:
 
 1. Parses the GitHub URL, stores the repo with its token **encrypted at rest** (`@repo/repos` encryption, `ENCRYPTION_KEY`).
 2. Fetches the file tree and **infers conventions** (lint/format, test stack, common patterns) into `Repo.conventions`.
 3. **Embeds** repo files (`fetchAndEmbedRepoFiles`) into `RepoFileEmbedding`.
 
-At generation time, the relevant spec sections / feature idea are embedded and used to retrieve top-K similar files (`searchSimilarFiles`, `TOP_K_PER_FILE`). Retrieved snippets plus a convention summary are rendered into the prompts for questions, spec, and code generation — so the system asks grounded questions and writes code that matches existing patterns. This is the capability that distinguishes the product from "ChatGPT with a nice form."
+**Context documents.** `uploadContextDocAction` stores a pasted/uploaded `.md`/`.txt` doc on `ProjectContextDoc`, then chunks it (`embedDocContent`, ~1500-char overlapping chunks, capped at `MAX_CHUNKS_PER_DOC`) and embeds each chunk into `ProjectContextDocEmbedding`. Embedding failure does not fail the upload (the doc is stored, just not yet retrievable) — same tolerance as repo connect. Available in both modes; greenfield projects use docs even without a repo.
+
+**Unified retrieval.** At generation time, `retrieveProjectContext` (in `apps/web/src/lib/context-retrieval.ts`) embeds the query once and searches repo files (`searchSimilarFiles`, top-8) and context-doc chunks (`searchSimilarContextDocs`, top-4) in parallel, returning two distinct rendered blocks: `codeContext` (ground truth) and `docsContext` (framed as "may be stale"). Both — plus a convention summary and any transcript context — are rendered into the prompts for questions, spec, and transcript extraction. Keeping code and docs separate lets prompts weight them differently. This grounding is what distinguishes the product from "ChatGPT with a nice form."
+
+**Transcript ingestion.** A feature can be seeded from a pasted refinement transcript instead of a typed idea. `extractFromTranscriptAction` runs the `extract-from-transcript` LLM step (Sonnet, tool-use, grounded in repo + docs) to distill a `title`, `idea`, and `TranscriptContext` (settled decisions / constraints / open questions). The raw transcript and extracted context are persisted on the `Feature`; the user reviews the extraction before the pipeline advances (never auto-advanced). Downstream steps feed the transcript context into their prompts: decisions are treated as settled, open questions seed the clarifying questions.
 
 ## 11. Code generation & pull requests
 
@@ -346,12 +386,11 @@ The branch is pushed and a PR opened via `@repo/repos` (`pull-request.ts`); `prU
 
 Tracked in `roadmap.md`. Not built yet:
 
-- **Meeting-transcript ingestion** — paste a refinement transcript → auto-draft idea + clarifying answers. The biggest gap vs. the `Vision.md` wedge.
 - **Tickets out** — export an approved spec to Linear/Jira with acceptance criteria.
-- **Provenance / lineage** — record the source of each artifact field, the first step toward the `Initiative → Decisions` spine in `Vision.md` §5.
+- **Provenance / lineage** — record the source of each artifact field, the first step toward the `Initiative → Decisions` spine in `Vision.md` §5. Context docs and transcripts already give every retrievable chunk a stable `(sourceType, sourceId)`, which is the seam this builds on.
 - **Collaboration** — per-section spec comments; real-time multiplayer editing.
 - **Outcome tracking** — cycle-time metrics, spec-drift detection, plan-accuracy feedback.
 - **Enterprise** — multi-LLM provider abstraction, org-level prompt customization, custom `FeatureSpec` fields.
-- **Other context sources** — Figma design intent, Notion/PRD ingestion.
+- **Richer context sources** — binary (PDF/DOCX) document ingestion, feature-scoped context docs, Figma design intent, Notion ingestion. Today's `ProjectContextDoc` is the concrete pattern these will generalize from.
 
 Do not pre-build hooks for these. The one architectural decision worth making deliberately before extending is whether to evolve the current `Project → Feature` schema toward the `Initiative → Decisions → Tickets → Changes` provenance spine (`Vision.md` §5); see `roadmap.md` for the recommendation.

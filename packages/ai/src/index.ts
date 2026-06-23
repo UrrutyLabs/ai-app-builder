@@ -16,3 +16,5 @@ export type {
   CheckConsistencyInput,
   ConsistencyIssue,
 } from "./steps/check-consistency";
+export { extractFromTranscript } from "./steps/extract-from-transcript";
+export type { ExtractFromTranscriptInput } from "./steps/extract-from-transcript";

@@ -27,3 +27,32 @@ export function renderSnippets(snippets: CodeSnippet[]): string {
     ...blocks,
   ].join("\n");
 }
+
+export interface DocSnippet {
+  docTitle: string;
+  content: string;
+  similarity?: number;
+}
+
+/**
+ * Format retrieved context-document chunks for prompt injection. Kept distinct
+ * from renderSnippets: docs (PRD / domain model / notes) may be stale, so the
+ * heading frames them as guidance rather than ground truth like code.
+ */
+export function renderDocSnippets(snippets: DocSnippet[]): string {
+  if (snippets.length === 0) return "";
+
+  const blocks = snippets.map((s) => {
+    const trimmed =
+      s.content.length > PER_SNIPPET_CHAR_CAP
+        ? s.content.slice(0, PER_SNIPPET_CHAR_CAP) + "\n[...truncated]"
+        : s.content;
+    return `--- ${s.docTitle} ---\n${trimmed}`;
+  });
+
+  return [
+    `Project documents (PRD / domain model / notes — may be stale, treat as guidance not ground truth):`,
+    "",
+    ...blocks,
+  ].join("\n");
+}

@@ -7,3 +7,5 @@ export * from "./answer";
 export * from "./implementation-plan";
 export * from "./repo";
 export * from "./conventions";
+export * from "./transcript-extraction";
+export * from "./context-doc";

@@ -37,23 +37,24 @@ export async function POST(req: Request): Promise<Response> {
       getFeatureById,
       getProjectByIdForUser,
       getRepoByProjectId,
-      searchSimilarFiles,
       setFeatureSpec,
     },
-    { renderSnippets, summarizeConventions, summarizeTree },
-    { embedQuery },
+    { summarizeConventions, summarizeTree },
     { requireUser },
     { toActionError },
     { revalidatePath },
+    { parseTranscriptContext, renderTranscriptContext },
+    { retrieveProjectContext },
   ] = await Promise.all([
     import("@repo/ai"),
     import("@repo/domain/schemas"),
     import("@repo/db"),
     import("@repo/repos"),
-    import("@repo/repos/server"),
     import("@/lib/auth/server"),
     import("@/lib/action-error"),
     import("next/cache"),
+    import("@/lib/transcript-context"),
+    import("@/lib/context-retrieval"),
   ]);
 
   let userId: string;
@@ -100,23 +101,14 @@ export async function POST(req: Request): Promise<Response> {
           ? summarizeConventions(repo.conventions) || null
           : null;
 
-        let codeContext: string | null = null;
-        if (repo) {
-          try {
-            const query = `${feature.idea}\n\n${answers
-              .map((a) => a.text)
-              .join("\n")}`;
-            const queryEmbedding = await embedQuery(query);
-            const snippets = await searchSimilarFiles(
-              repo.id,
-              queryEmbedding,
-              8,
-            );
-            if (snippets.length > 0) codeContext = renderSnippets(snippets);
-          } catch (err) {
-            console.error("[streamSpec] retrieval failed:", err);
-          }
-        }
+        const { codeContext, docsContext } = await retrieveProjectContext({
+          projectId: feature.projectId,
+          query: `${feature.idea}\n\n${answers.map((a) => a.text).join("\n")}`,
+        });
+
+        const transcriptContext = renderTranscriptContext(
+          parseTranscriptContext(feature.transcriptContext),
+        );
 
         let finalSpec: import("@repo/domain/schemas").FeatureSpec | null = null;
         for await (const event of generateSpecStream({
@@ -128,6 +120,8 @@ export async function POST(req: Request): Promise<Response> {
           repoContext,
           conventionsContext,
           codeContext,
+          transcriptContext,
+          docsContext,
         })) {
           if (event.kind === "snapshot") {
             send({ type: "snapshot", snapshot: event.snapshot });

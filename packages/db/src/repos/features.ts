@@ -9,10 +9,12 @@ import {
   FeatureSpecSchema,
   ImplementationPlanSchema,
   QuestionListSchema,
+  TranscriptContextSchema,
   type Answer,
   type FeatureSpec,
   type ImplementationPlan,
   type Question,
+  type TranscriptContext,
 } from "@repo/domain/schemas";
 import { prisma } from "../client";
 
@@ -31,6 +33,8 @@ export type FeatureRecord = {
   approvedAt: Date | null;
   prUrl: string | null;
   prCreatedAt: Date | null;
+  transcript: string | null;
+  transcriptContext: Prisma.JsonValue | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -48,6 +52,8 @@ const toRecord = (f: PrismaFeature): FeatureRecord => ({
   approvedAt: f.approvedAt,
   prUrl: f.prUrl,
   prCreatedAt: f.prCreatedAt,
+  transcript: f.transcript,
+  transcriptContext: f.transcriptContext,
   createdAt: f.createdAt,
   updatedAt: f.updatedAt,
 });
@@ -62,6 +68,26 @@ export async function createFeature(input: {
       projectId: input.projectId,
       title: input.title,
       idea: input.idea,
+    },
+  });
+  return toRecord(row);
+}
+
+export async function createFeatureFromTranscript(input: {
+  projectId: string;
+  title: string;
+  idea: string;
+  transcript: string;
+  transcriptContext: TranscriptContext;
+}): Promise<FeatureRecord> {
+  const validated = TranscriptContextSchema.parse(input.transcriptContext);
+  const row = await prisma.feature.create({
+    data: {
+      projectId: input.projectId,
+      title: input.title,
+      idea: input.idea,
+      transcript: input.transcript,
+      transcriptContext: validated as Prisma.InputJsonValue,
     },
   });
   return toRecord(row);

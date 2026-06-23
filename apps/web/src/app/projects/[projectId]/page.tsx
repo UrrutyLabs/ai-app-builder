@@ -4,11 +4,13 @@ import {
   countRepoEmbeddings,
   getProjectByIdForUser,
   getRepoByProjectId,
+  listContextDocsByProjectId,
   listFeaturesByProject,
 } from "@repo/db";
 import { getCurrentUser } from "@/lib/auth/server";
 import { RepoPanel } from "@/components/project/repo-panel";
 import { EditProjectForm } from "@/components/project/edit-project-form";
+import { ContextDocsSection } from "@/components/project/context-docs-section";
 
 export const dynamic = "force-dynamic";
 
@@ -28,11 +30,12 @@ export default async function ProjectPage({
 
   const editing = edit === "project";
 
-  const [features, repo] = await Promise.all([
+  const [features, repo, contextDocs] = await Promise.all([
     listFeaturesByProject(projectId),
     project.mode === "existing_system"
       ? getRepoByProjectId(projectId)
       : Promise.resolve(null),
+    listContextDocsByProjectId(projectId),
   ]);
 
   const embeddingCount = repo ? await countRepoEmbeddings(repo.id) : 0;
@@ -99,6 +102,8 @@ export default async function ProjectPage({
           />
         </div>
       ) : null}
+
+      <ContextDocsSection projectId={project.id} docs={contextDocs} />
 
       <div className="space-y-3">
         <h2 className="text-lg font-medium">Features</h2>

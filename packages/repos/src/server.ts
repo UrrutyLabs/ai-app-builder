@@ -13,3 +13,10 @@ export {
   fetchAndEmbedRepoFiles,
   type IndexedFile,
 } from "./index-files";
+export {
+  chunkDocContent,
+  embedDocContent,
+  MAX_CHUNKS_PER_DOC,
+  type DocChunk,
+  type EmbeddedDocChunk,
+} from "./embed-doc";

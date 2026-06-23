@@ -25,17 +25,18 @@ enum FeatureStatus {
 }
 
 model Project {
-  id          String    @id @default(cuid())
+  id          String               @id @default(cuid())
   userId      String?
   name        String
   mode        Mode
   description String?
   specPath    String?
   planPath    String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
   features    Feature[]
   repo        Repo?
+  contextDocs ProjectContextDoc[]
 
   @@index([userId])
 }
@@ -70,22 +71,24 @@ model RepoFileEmbedding {
 }
 
 model Feature {
-  id           String        @id @default(cuid())
-  projectId    String
-  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  title        String
-  idea         String
-  status       FeatureStatus @default(DRAFT)
-  questions    Json?
-  answers      Json?
-  spec         Json?
-  plan         Json?
-  approvedAt   DateTime?
-  prUrl        String?
-  prCreatedAt  DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  specVersions SpecVersion[]
+  id                String        @id @default(cuid())
+  projectId         String
+  project           Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title             String
+  idea              String
+  status            FeatureStatus @default(DRAFT)
+  questions         Json?
+  answers           Json?
+  spec              Json?
+  plan              Json?
+  approvedAt        DateTime?
+  prUrl             String?
+  prCreatedAt       DateTime?
+  transcript        String?
+  transcriptContext Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  specVersions      SpecVersion[]
 }
 
 model SpecVersion {
@@ -96,4 +99,32 @@ model SpecVersion {
   createdAt DateTime @default(now())
 
   @@index([featureId, createdAt])
+}
+
+model ProjectContextDoc {
+  id         String                       @id @default(cuid())
+  projectId  String
+  project    Project                      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title      String
+  content    String
+  mimeType   String
+  byteLength Int
+  createdAt  DateTime                     @default(now())
+  updatedAt  DateTime                     @updatedAt
+  embeddings ProjectContextDocEmbedding[]
+
+  @@index([projectId])
+}
+
+model ProjectContextDocEmbedding {
+  id        String                      @id @default(cuid())
+  docId     String
+  doc       ProjectContextDoc           @relation(fields: [docId], references: [id], onDelete: Cascade)
+  chunkIx   Int
+  content   String
+  embedding Unsupported("vector(1536)")
+  updatedAt DateTime                    @default(now())
+
+  @@unique([docId, chunkIx])
+  @@index([docId])
 }

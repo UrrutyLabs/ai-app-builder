@@ -9,20 +9,21 @@ import {
   getFeatureById,
   getProjectByIdForUser,
   getRepoByProjectId,
-  searchSimilarFiles,
   setFeatureQuestions,
   type FeatureRecord,
 } from "@repo/db";
-import { renderSnippets, summarizeConventions, summarizeTree } from "@repo/repos";
-import { embedQuery } from "@repo/repos/server";
+import { summarizeConventions, summarizeTree } from "@repo/repos";
 import { requireUser } from "@/lib/auth/server";
 import { toActionError } from "@/lib/action-error";
+import {
+  parseTranscriptContext,
+  renderTranscriptContext,
+} from "@/lib/transcript-context";
+import { retrieveProjectContext } from "@/lib/context-retrieval";
 
 const InputSchema = z.object({
   featureId: z.string().min(1),
 });
-
-const TOP_K = 8;
 
 export async function generateQuestionsAction(
   raw: unknown,
@@ -43,16 +44,14 @@ export async function generateQuestionsAction(
       ? summarizeConventions(repo.conventions) || null
       : null;
 
-    let codeContext: string | null = null;
-    if (repo) {
-      try {
-        const queryEmbedding = await embedQuery(feature.idea);
-        const snippets = await searchSimilarFiles(repo.id, queryEmbedding, TOP_K);
-        if (snippets.length > 0) codeContext = renderSnippets(snippets);
-      } catch (err) {
-        console.error("[generateQuestions] retrieval failed:", err);
-      }
-    }
+    const { codeContext, docsContext } = await retrieveProjectContext({
+      projectId: feature.projectId,
+      query: feature.idea,
+    });
+
+    const transcriptContext = renderTranscriptContext(
+      parseTranscriptContext(feature.transcriptContext),
+    );
 
     const questions = await generateQuestions({
       idea: feature.idea,
@@ -60,6 +59,8 @@ export async function generateQuestionsAction(
       repoContext,
       conventionsContext,
       codeContext,
+      transcriptContext,
+      docsContext,
     });
 
     const updated = await setFeatureQuestions(featureId, questions);

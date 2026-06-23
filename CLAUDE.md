@@ -8,8 +8,10 @@
 
 It is **not** a code generator, an IDE, a Cursor competitor, or an autonomous agent. The value lives in narrowing requirements, making ambiguity explicit, and producing high-quality structured artifacts.
 
-The pipeline (v0.1, complete):
-`idea → AI clarifying questions → user answers → AI FeatureSpec → user edits + approves → AI ImplementationPlan → JSON/Markdown export`
+The pipeline (see `docs/architecture.md` for the current, fuller picture):
+`idea (typed or distilled from a refinement transcript) → AI clarifying questions → user answers → AI FeatureSpec (streamed) → user edits + approves → AI ImplementationPlan → JSON/Markdown export or a GitHub PR`
+
+All AI steps are grounded in the connected repo and any attached project context documents (PRD / domain model / notes). Auth + multi-tenancy are live. The deep docs are the source of truth for what's shipped; this line is just orientation.
 
 ## Read these first
 

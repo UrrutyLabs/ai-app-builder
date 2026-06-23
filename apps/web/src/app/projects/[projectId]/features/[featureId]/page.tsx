@@ -29,6 +29,8 @@ import { GeneratePlanButton } from "@/components/feature/generate-plan-button";
 import { PlanView } from "@/components/feature/plan-view";
 import { ExportButtons } from "@/components/feature/export-buttons";
 import { CreatePrForm } from "@/components/feature/create-pr-form";
+import { TranscriptContextView } from "@/components/feature/transcript-context-view";
+import { parseTranscriptContext } from "@/lib/transcript-context";
 
 export default async function FeaturePage({
   params,
@@ -62,6 +64,7 @@ export default async function FeaturePage({
   const plan = feature.plan
     ? ImplementationPlanSchema.parse(feature.plan)
     : null;
+  const transcriptContext = parseTranscriptContext(feature.transcriptContext);
 
   const hasQuestions = !!questions && questions.length > 0;
   const hasAnswers = !!answers && answers.length > 0;
@@ -131,6 +134,19 @@ export default async function FeaturePage({
           {feature.idea}
         </p>
       </section>
+
+      {transcriptContext ? (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+            From the transcript
+          </h2>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+            Distilled from the refinement transcript. Review before generating
+            questions — this context is fed into every downstream step.
+          </p>
+          <TranscriptContextView context={transcriptContext} />
+        </section>
+      ) : null}
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-500 dark:text-neutral-400">

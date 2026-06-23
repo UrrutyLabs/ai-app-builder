@@ -2,7 +2,7 @@
 
 > Forward-looking, suggested, not committed. Each version represents a coherent slice of work that ships meaningful user value. Ordering reflects dependencies and leverage, not deadlines. Update this doc when scope or priorities shift.
 >
-> **Last reconciled against `git log` on 2026-06-22.** Status flags below reflect what's actually in the repo, not what was originally planned.
+> **Last reconciled against `git log` on 2026-06-23.** Status flags below reflect what's actually in the repo, not what was originally planned.
 
 ## Mission
 
@@ -22,7 +22,9 @@ The product is **well past** the original "v0.1 export-only" milestone. From git
 - **v0.5 ✓ (partial)** — Spec versioning (`SpecVersion` model) + diff view + history page. PR sync-back. **Not yet built:** per-section comments, real-time collaboration.
 - **v0.2 ✓ (landed most recently)** — Neon Auth + multi-tenancy. `Project.userId` scoping, sign-in flow, orphan-claim banner. This was built *after* v0.3–v0.5; auth was the last plumbing piece rather than the first.
 
-**In flight (uncommitted working tree as of this writing):** streaming spec generation — `api/spec/stream`, `lib/spec-events.ts`, `packages/ai/.../generate-spec/stream.ts`, and a modified `generate-spec-button`. Finish or stash before the next slice; don't leave the tree dirty.
+- **Streaming spec generation ✓** — `api/spec/stream` (SSE), `generate-spec/stream.ts`, live preview in `generate-spec-button`. The spec materializes as the LLM produces it.
+- **Transcript ingestion ✓** — paste a refinement transcript → `extract-from-transcript` step distills title/idea/decisions/constraints/openQuestions → human review → seeds the existing pipeline. `Feature.transcript` / `transcriptContext` persisted. This was Phase 1's flagged highest-value feature; it's now built.
+- **Project context documents ✓** — attach PRD / domain-model / notes (`.md`/`.txt`) to a project; chunked + embedded (`ProjectContextDoc` + `ProjectContextDocEmbedding`) and retrieved into question/spec/transcript prompts via a unified `retrieveProjectContext` helper alongside the repo index. First grounding source beyond the repo; the concrete pattern a later `ContextSource` generalization (Notion/Figma/PDF) will build on. Brief: [`docs/specs/project-context-docs.md`](specs/project-context-docs.md).
 
 Underlying tech: Next.js 16 + RSC + Server Actions, Prisma on Neon Postgres (pgvector), Anthropic SDK with structured tool-use output (Haiku for questions, Sonnet for spec, Opus for plan), OpenAI for embeddings, Zod-everywhere validation, monorepo with `domain` / `db` / `ai` packages.
 
@@ -45,9 +47,10 @@ Stabilize what exists so it can be shown without breaking.
 
 ### Phase 1 — First real users (Vision §10's "next 4 weeks")
 
-- **Deploy behind auth.** Auth just landed, so this is now unblocked. Vercel + Neon is already the stack; stand up a hosted instance design partners can reach.
-- **Transcript ingestion — the single highest-value feature on this list.** Paste/upload a refinement transcript → auto-draft the feature `idea` and pre-fill clarifying answers. This is what converts the product from "ChatGPT with a nice form" into the Loop wedge, and Vision §10 calls transcripts out explicitly ("rawest, most valuable context, no good competitor"). Today the only input is a typed idea; this is the biggest gap between the code and the vision. **Implementation brief: [`docs/specs/transcript-ingestion.md`](specs/transcript-ingestion.md).**
-- **Onboarding under 10 minutes** — connect repo + create first feature without hand-holding. Loading skeletons + `sonner` toasts for AI calls (carried over from the original v0.2 polish list).
+- **Transcript ingestion ✓** — shipped. Paste a refinement transcript → distilled idea + extracted decisions/constraints/open-questions → human review → seeds the pipeline. This was the single highest-value feature on the list and is done. Brief: [`docs/specs/transcript-ingestion.md`](specs/transcript-ingestion.md).
+- **Project context documents ✓** — shipped. Attach PRD / domain-model / notes; grounded into every feature alongside the repo. Brief: [`docs/specs/project-context-docs.md`](specs/project-context-docs.md).
+- **Deploy behind auth.** Auth landed, so this is unblocked. Vercel + Neon is already the stack; stand up a hosted instance design partners can reach. **Deferred by choice** — still building features before deploying.
+- **Onboarding under 10 minutes** — connect repo + create first feature without hand-holding. Loading skeletons + `sonner` toasts for AI calls (carried over from the original v0.2 polish list). **Still pending.**
 - **Run one real refinement of your own team through it.** Whatever breaks is the Phase 2 backlog; whatever works is the design-partner demo.
 
 ### Phase 2 — Make it sticky for a handful of teams (Vision §10's "weeks 4–12")
@@ -97,7 +100,7 @@ Each would change the category we compete in; pick on customer signal. Notion/PR
 ## How to read this roadmap
 
 - **Phases 0 → 3 are sequential and oriented at one outcome: real teams using it.** Phase 0 is a stabilization gate, not optional.
-- **Transcript ingestion (Phase 1) is the single highest-leverage feature.** It's what makes the product the Loop wedge rather than a nicer spec form. The original "highest leverage = v0.3 code grounding" is already shipped; transcripts are the new frontier.
+- **Transcript ingestion + project context docs (Phase 1) were the highest-leverage features and are now shipped.** Together they make the product the Loop wedge rather than a nicer spec form: refinement transcripts and ambient project docs are the "rawest, most valuable context" the Vision calls out. With those done, the remaining Phase 1 work is non-feature (deploy, onboarding polish), and the next net-new frontier is **tickets out** (Phase 2) — the wedge's actual output.
 - **The data-model decision is the highest-stakes architectural call** and is deliberately broken out above, because it shapes everything after the wedge is validated.
 - **v0.6 → v1.0 can interleave** with the above based on customer signal.
 
