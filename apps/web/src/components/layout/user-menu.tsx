@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useTheme } from "next-themes";
-import { LogOut, Sun } from "lucide-react";
+import { LogOut, Sun, UserCog } from "lucide-react";
 import { authClient } from "@/lib/auth/client";
 import {
   DropdownMenu,
@@ -61,6 +62,12 @@ export function UserMenu({
           ) : null}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/account">
+            <UserCog className="size-4" aria-hidden="true" />
+            Account settings
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <Sun className="size-4" aria-hidden="true" />
