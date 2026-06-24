@@ -1,7 +1,6 @@
-import { getCurrentUser } from "@/lib/auth/server";
+import { getActiveOrganization } from "@/lib/auth/server";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { OrgSettingsForm } from "@/components/org/org-settings-form";
 
 export const dynamic = "force-dynamic";
 
@@ -13,16 +12,14 @@ const MODELS = [
 ];
 
 export default async function OrgSettingsPage() {
-  const user = await getCurrentUser();
-  const orgName = user?.name?.trim() || "Personal";
+  const org = await getActiveOrganization();
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Organization configuration. Most of this becomes editable when teams
-          and orgs ship.
+          Organization configuration.
         </p>
       </div>
 
@@ -30,18 +27,13 @@ export default async function OrgSettingsPage() {
         <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
           Organization
         </h2>
-        <div className="space-y-2">
-          <Label htmlFor="org-name">Name</Label>
-          <Input id="org-name" defaultValue={orgName} disabled />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="org-slug">Slug</Label>
-          <Input
-            id="org-slug"
-            defaultValue={orgName.toLowerCase().replace(/\s+/g, "-")}
-            disabled
-          />
-        </div>
+        {org ? (
+          <OrgSettingsForm orgId={org.id} name={org.name} slug={org.slug} />
+        ) : (
+          <p className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+            Setting up your organization… reload in a moment.
+          </p>
+        )}
       </section>
 
       <section className="space-y-3">
