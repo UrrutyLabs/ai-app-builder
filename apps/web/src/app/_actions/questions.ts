@@ -7,13 +7,12 @@ import { NotFoundError } from "@repo/domain";
 import { generateQuestions } from "@repo/ai";
 import {
   getFeatureById,
-  getProjectByIdForUser,
   getRepoByProjectId,
   setFeatureQuestions,
   type FeatureRecord,
 } from "@repo/db";
 import { summarizeConventions, summarizeTree } from "@repo/repos";
-import { requireUser } from "@/lib/auth/server";
+import { requireMyProject } from "@/lib/auth/scope";
 import { toActionError } from "@/lib/action-error";
 import {
   parseTranscriptContext,
@@ -29,14 +28,12 @@ export async function generateQuestionsAction(
   raw: unknown,
 ): Promise<ActionResult<FeatureRecord>> {
   try {
-    const user = await requireUser();
     const { featureId } = InputSchema.parse(raw);
 
     const feature = await getFeatureById(featureId);
     if (!feature) throw new NotFoundError(`Feature ${featureId} not found`);
 
-    const project = await getProjectByIdForUser(feature.projectId, user.id);
-    if (!project) throw new NotFoundError(`Project ${feature.projectId} not found`);
+    const project = await requireMyProject(feature.projectId);
 
     const repo = await getRepoByProjectId(feature.projectId);
     const repoContext = repo?.fileTree ? summarizeTree(repo.fileTree) : null;

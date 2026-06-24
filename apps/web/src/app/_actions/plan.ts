@@ -11,11 +11,10 @@ import {
 import { generatePlan } from "@repo/ai";
 import {
   getFeatureById,
-  getProjectByIdForUser,
   setFeaturePlan,
   type FeatureRecord,
 } from "@repo/db";
-import { requireUser } from "@/lib/auth/server";
+import { requireMyProject } from "@/lib/auth/scope";
 import { toActionError } from "@/lib/action-error";
 
 const InputSchema = z.object({
@@ -26,14 +25,12 @@ export async function generatePlanAction(
   raw: unknown,
 ): Promise<ActionResult<FeatureRecord>> {
   try {
-    const user = await requireUser();
     const { featureId } = InputSchema.parse(raw);
 
     const feature = await getFeatureById(featureId);
     if (!feature) throw new NotFoundError(`Feature ${featureId} not found`);
 
-    const project = await getProjectByIdForUser(feature.projectId, user.id);
-    if (!project) throw new NotFoundError(`Project ${feature.projectId} not found`);
+    await requireMyProject(feature.projectId);
 
     if (feature.status !== "SPEC_APPROVED" && feature.status !== "PLAN_GENERATED") {
       throw new ConflictError(

@@ -3,12 +3,11 @@ import { notFound } from "next/navigation";
 import { Plus } from "lucide-react";
 import {
   countRepoEmbeddings,
-  getProjectByIdForUser,
   getRepoByProjectId,
   listContextDocsByProjectId,
   listFeaturesByProject,
 } from "@repo/db";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getMyProject } from "@/lib/auth/scope";
 import { RepoPanel } from "@/components/project/repo-panel";
 import { ContextDocsSection } from "@/components/project/context-docs-section";
 import { Badge } from "@/components/ui/badge";
@@ -22,9 +21,7 @@ export default async function ProjectPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const user = await getCurrentUser();
-  if (!user) notFound();
-  const project = await getProjectByIdForUser(projectId, user.id);
+  const project = await getMyProject(projectId);
   if (!project) notFound();
 
   const [features, repo, contextDocs] = await Promise.all([

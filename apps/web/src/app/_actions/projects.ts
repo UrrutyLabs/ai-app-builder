@@ -9,13 +9,14 @@ import {
 import type { ActionResult } from "@repo/domain";
 import { NotFoundError } from "@repo/domain";
 import {
+  claimLegacyProjectsForUser,
   claimUnclaimedProjects,
   createProject,
-  getProjectByIdForUser,
+  getProjectForUser,
   updateProject,
   type ProjectRecord,
 } from "@repo/db";
-import { requireUser } from "@/lib/auth/server";
+import { getActiveOrganizationId, requireUser } from "@/lib/auth/server";
 import { toActionError } from "@/lib/action-error";
 
 export async function createProjectAction(
@@ -24,9 +25,11 @@ export async function createProjectAction(
   let project: ProjectRecord;
   try {
     const user = await requireUser();
+    const organizationId = await getActiveOrganizationId();
     const input = CreateProjectInputSchema.parse(raw);
     project = await createProject({
       userId: user.id,
+      organizationId,
       name: input.name,
       mode: input.mode,
       description: input.description ?? null,
@@ -44,12 +47,14 @@ export async function updateProjectAction(
   let project: ProjectRecord;
   try {
     const user = await requireUser();
+    const organizationId = await getActiveOrganizationId();
     const input = UpdateProjectInputSchema.parse(raw);
-    const existing = await getProjectByIdForUser(input.id, user.id);
+    const existing = await getProjectForUser(input.id, user.id, organizationId);
     if (!existing) throw new NotFoundError(`Project ${input.id} not found`);
     project = await updateProject({
       id: input.id,
       userId: user.id,
+      organizationId,
       name: input.name,
       description: input.description ?? null,
     });
@@ -67,6 +72,24 @@ export async function claimUnclaimedProjectsAction(): Promise<
   try {
     const user = await requireUser();
     const count = await claimUnclaimedProjects(user.id);
+    revalidatePath("/");
+    return { ok: true, data: { count } };
+  } catch (err) {
+    return { ok: false, error: toActionError(err) };
+  }
+}
+
+// Backfill: move the caller's legacy (org-less) projects into their active
+// organization. Called by the client org bootstrap right after it ensures a
+// personal org exists and is active. No-op when there's no active org yet.
+export async function claimMyLegacyProjectsAction(): Promise<
+  ActionResult<{ count: number }>
+> {
+  try {
+    const user = await requireUser();
+    const organizationId = await getActiveOrganizationId();
+    if (!organizationId) return { ok: true, data: { count: 0 } };
+    const count = await claimLegacyProjectsForUser(user.id, organizationId);
     revalidatePath("/");
     return { ok: true, data: { count } };
   } catch (err) {

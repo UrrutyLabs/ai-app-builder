@@ -35,12 +35,12 @@ export async function POST(req: Request): Promise<Response> {
     { AnswerListSchema, QuestionListSchema },
     {
       getFeatureById,
-      getProjectByIdForUser,
+      getProjectForUser,
       getRepoByProjectId,
       setFeatureSpec,
     },
     { summarizeConventions, summarizeTree },
-    { requireUser },
+    { getActiveOrganizationId, requireUser },
     { toActionError },
     { revalidatePath },
     { parseTranscriptContext, renderTranscriptContext },
@@ -68,6 +68,7 @@ export async function POST(req: Request): Promise<Response> {
       headers: { "Content-Type": "application/json" },
     });
   }
+  const organizationId = await getActiveOrganizationId();
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -81,7 +82,11 @@ export async function POST(req: Request): Promise<Response> {
       try {
         const feature = await getFeatureById(featureId);
         if (!feature) throw new Error(`Feature ${featureId} not found`);
-        const project = await getProjectByIdForUser(feature.projectId, userId);
+        const project = await getProjectForUser(
+          feature.projectId,
+          userId,
+          organizationId,
+        );
         if (!project)
           throw new Error(`Project ${feature.projectId} not found`);
         if (!feature.questions || !feature.answers) {

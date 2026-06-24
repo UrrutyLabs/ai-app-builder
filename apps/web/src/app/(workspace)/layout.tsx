@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
-import { listProjectsByUserId } from "@repo/db";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getActiveOrganizationId, getCurrentUser } from "@/lib/auth/server";
+import { listMyProjects } from "@/lib/auth/scope";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { AppHeader } from "@/components/layout/app-header";
+import { EnsurePersonalOrg } from "@/components/auth/ensure-personal-org";
 
 export const dynamic = "force-dynamic";
 // Two-tier console shell: org-scoped nav by default, project-scoped inside a project.
@@ -17,22 +18,28 @@ export default async function WorkspaceLayout({
   // Middleware already gates these routes; this is the defensive fallback.
   if (!user) redirect("/auth/sign-in");
 
-  const projects = (await listProjectsByUserId(user.id)).map((p) => ({
-    id: p.id,
-    name: p.name,
-  }));
-  // Placeholder org name until real organizations land.
+  const [projects, activeOrgId] = await Promise.all([
+    listMyProjects(),
+    getActiveOrganizationId(),
+  ]);
+  const projectNav = projects.map((p) => ({ id: p.id, name: p.name }));
+  // Org name shown in the switcher until a real org name is read from Neon Auth.
   const orgName = user.name?.trim() || "Personal";
 
   return (
     <TooltipProvider delayDuration={300}>
+      <EnsurePersonalOrg
+        enabled={!activeOrgId}
+        orgName={orgName}
+        slugSeed={user.id}
+      />
       <div className="flex min-h-screen">
         <aside className="hidden w-60 shrink-0 flex-col border-r bg-muted/30 md:flex">
-          <SidebarNav projects={projects} />
+          <SidebarNav projects={projectNav} />
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
           <AppHeader
-            projects={projects}
+            projects={projectNav}
             orgName={orgName}
             userName={user.name}
             userEmail={user.email}

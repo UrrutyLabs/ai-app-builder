@@ -6,11 +6,9 @@ import {
   ExtractFromTranscriptInputSchema,
 } from "@repo/domain/schemas";
 import type { ActionResult } from "@repo/domain";
-import { NotFoundError } from "@repo/domain";
 import { extractFromTranscript } from "@repo/ai";
 import {
   createFeatureFromTranscript,
-  getProjectByIdForUser,
   getRepoByProjectId,
   type FeatureRecord,
 } from "@repo/db";
@@ -18,7 +16,7 @@ import {
   summarizeConventions,
   summarizeTree,
 } from "@repo/repos";
-import { requireUser } from "@/lib/auth/server";
+import { requireMyProject } from "@/lib/auth/scope";
 import { toActionError } from "@/lib/action-error";
 import { retrieveProjectContext } from "@/lib/context-retrieval";
 
@@ -27,11 +25,9 @@ export async function extractFromTranscriptAction(
 ): Promise<ActionResult<FeatureRecord>> {
   let feature: FeatureRecord;
   try {
-    const user = await requireUser();
     const input = ExtractFromTranscriptInputSchema.parse(raw);
 
-    const project = await getProjectByIdForUser(input.projectId, user.id);
-    if (!project) throw new NotFoundError(`Project ${input.projectId} not found`);
+    const project = await requireMyProject(input.projectId);
 
     const repo = await getRepoByProjectId(input.projectId);
     const repoContext = repo?.fileTree ? summarizeTree(repo.fileTree) : null;

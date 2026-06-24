@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
-import { getProjectByIdForUser } from "@repo/db";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getMyProject } from "@/lib/auth/scope";
 import { EditProjectForm } from "@/components/project/edit-project-form";
 import { Button } from "@/components/ui/button";
 
@@ -12,9 +11,7 @@ export default async function ProjectSettingsPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const user = await getCurrentUser();
-  if (!user) notFound();
-  const project = await getProjectByIdForUser(projectId, user.id);
+  const project = await getMyProject(projectId);
   if (!project) notFound();
 
   return (

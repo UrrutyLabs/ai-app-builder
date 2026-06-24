@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import { countUnclaimedProjects, listProjectsByUserId } from "@repo/db";
+import { countUnclaimedProjects } from "@repo/db";
 import { getCurrentUser } from "@/lib/auth/server";
+import { listMyProjects } from "@/lib/auth/scope";
 import { ClaimOrphansBanner } from "@/components/auth/claim-orphans-banner";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -21,7 +22,7 @@ export default async function DashboardPage() {
   }
 
   const [projects, unclaimedCount] = await Promise.all([
-    listProjectsByUserId(user.id),
+    listMyProjects(),
     countUnclaimedProjects(),
   ]);
 

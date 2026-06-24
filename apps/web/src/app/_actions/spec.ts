@@ -17,7 +17,6 @@ import { generateSpec } from "@repo/ai";
 import {
   approveFeatureSpec,
   getFeatureById,
-  getProjectByIdForUser,
   getRepoByProjectId,
   getSpecVersionById,
   listSpecVersionsByFeatureId,
@@ -28,7 +27,7 @@ import {
   summarizeConventions,
   summarizeTree,
 } from "@repo/repos";
-import { requireUser } from "@/lib/auth/server";
+import { requireMyProject } from "@/lib/auth/scope";
 import { toActionError } from "@/lib/action-error";
 import {
   parseTranscriptContext,
@@ -44,14 +43,12 @@ export async function generateSpecAction(
   raw: unknown,
 ): Promise<ActionResult<FeatureRecord>> {
   try {
-    const user = await requireUser();
     const { featureId } = FeatureIdInput.parse(raw);
 
     const feature = await getFeatureById(featureId);
     if (!feature) throw new NotFoundError(`Feature ${featureId} not found`);
 
-    const project = await getProjectByIdForUser(feature.projectId, user.id);
-    if (!project) throw new NotFoundError(`Project ${feature.projectId} not found`);
+    const project = await requireMyProject(feature.projectId);
 
     if (!feature.questions || !feature.answers) {
       throw new ValidationError(
@@ -109,12 +106,10 @@ export async function saveSpecAction(
   raw: unknown,
 ): Promise<ActionResult<FeatureRecord>> {
   try {
-    const user = await requireUser();
     const input = SaveSpecInput.parse(raw);
     const existing = await getFeatureById(input.featureId);
     if (!existing) throw new NotFoundError(`Feature ${input.featureId} not found`);
-    const project = await getProjectByIdForUser(existing.projectId, user.id);
-    if (!project) throw new NotFoundError(`Project ${existing.projectId} not found`);
+    await requireMyProject(existing.projectId);
     const feature = await setFeatureSpec(input.featureId, input.spec, input.note);
     revalidatePath(`/projects/${feature.projectId}/features/${feature.id}`);
     return { ok: true, data: feature };
@@ -132,12 +127,10 @@ export async function restoreSpecVersionAction(
   raw: unknown,
 ): Promise<ActionResult<FeatureRecord>> {
   try {
-    const user = await requireUser();
     const { featureId, versionId } = RestoreSpecVersionInput.parse(raw);
     const existing = await getFeatureById(featureId);
     if (!existing) throw new NotFoundError(`Feature ${featureId} not found`);
-    const project = await getProjectByIdForUser(existing.projectId, user.id);
-    if (!project) throw new NotFoundError(`Project ${existing.projectId} not found`);
+    await requireMyProject(existing.projectId);
 
     const version = await getSpecVersionById(versionId);
     if (!version || version.featureId !== featureId) {
@@ -166,12 +159,10 @@ export async function approveSpecAction(
   raw: unknown,
 ): Promise<ActionResult<FeatureRecord>> {
   try {
-    const user = await requireUser();
     const { featureId } = FeatureIdInput.parse(raw);
     const existing = await getFeatureById(featureId);
     if (!existing) throw new NotFoundError(`Feature ${featureId} not found`);
-    const project = await getProjectByIdForUser(existing.projectId, user.id);
-    if (!project) throw new NotFoundError(`Project ${existing.projectId} not found`);
+    await requireMyProject(existing.projectId);
     if (!existing.spec) {
       throw new ConflictError("Cannot approve a feature with no spec");
     }

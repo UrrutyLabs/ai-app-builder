@@ -4,7 +4,6 @@ import { ArrowRight, Circle, CircleCheck, CircleDot, Lock } from "lucide-react";
 import {
   countSpecVersionsByFeatureId,
   getFeatureById,
-  getProjectByIdForUser,
 } from "@repo/db";
 import {
   AnswerListSchema,
@@ -12,7 +11,7 @@ import {
   ImplementationPlanSchema,
   QuestionListSchema,
 } from "@repo/domain/schemas";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getMyProject } from "@/lib/auth/scope";
 import { Badge } from "@/components/ui/badge";
 import { GenerateQuestionsButton } from "@/components/feature/generate-questions-button";
 import { AnswerForm } from "@/components/feature/answer-form";
@@ -104,10 +103,8 @@ export default async function FeaturePage({
 }) {
   const { projectId, featureId } = await params;
   const { edit } = await searchParams;
-  const user = await getCurrentUser();
-  if (!user) notFound();
   const [project, feature] = await Promise.all([
-    getProjectByIdForUser(projectId, user.id),
+    getMyProject(projectId),
     getFeatureById(featureId),
   ]);
   if (!project || !feature || feature.projectId !== project.id) notFound();

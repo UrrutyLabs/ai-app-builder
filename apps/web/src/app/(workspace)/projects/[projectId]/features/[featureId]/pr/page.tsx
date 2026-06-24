@@ -4,12 +4,11 @@ import { Lock } from "lucide-react";
 import {
   getEncryptedTokenForProject,
   getFeatureById,
-  getProjectByIdForUser,
   getRepoByProjectId,
 } from "@repo/db";
 import { ImplementationPlanSchema } from "@repo/domain/schemas";
 import { decryptToken } from "@repo/repos/server";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getMyProject } from "@/lib/auth/scope";
 import { countGeneratable, countScaffoldable } from "@/lib/scaffold-stubs";
 import { fetchPrStatus, type PrStatus } from "@/lib/pr-status";
 import { CreatePrForm } from "@/components/feature/create-pr-form";
@@ -23,10 +22,8 @@ export default async function PrWorkspacePage({
   params: Promise<{ projectId: string; featureId: string }>;
 }) {
   const { projectId, featureId } = await params;
-  const user = await getCurrentUser();
-  if (!user) notFound();
   const [project, feature] = await Promise.all([
-    getProjectByIdForUser(projectId, user.id),
+    getMyProject(projectId),
     getFeatureById(featureId),
   ]);
   if (!project || !feature || feature.projectId !== project.id) notFound();

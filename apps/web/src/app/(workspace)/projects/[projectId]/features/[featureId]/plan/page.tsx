@@ -3,11 +3,10 @@ import { notFound } from "next/navigation";
 import { FolderGit2, Lock } from "lucide-react";
 import {
   getFeatureById,
-  getProjectByIdForUser,
   getRepoByProjectId,
 } from "@repo/db";
 import { ImplementationPlanSchema } from "@repo/domain/schemas";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getMyProject } from "@/lib/auth/scope";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { PlanView } from "@/components/feature/plan-view";
@@ -21,10 +20,8 @@ export default async function PlanWorkspacePage({
   params: Promise<{ projectId: string; featureId: string }>;
 }) {
   const { projectId, featureId } = await params;
-  const user = await getCurrentUser();
-  if (!user) notFound();
   const [project, feature] = await Promise.all([
-    getProjectByIdForUser(projectId, user.id),
+    getMyProject(projectId),
     getFeatureById(featureId),
   ]);
   if (!project || !feature || feature.projectId !== project.id) notFound();

@@ -11,23 +11,20 @@ import {
   createContextDoc,
   deleteContextDoc,
   getContextDocById,
-  getProjectByIdForUser,
   replaceContextDocEmbeddings,
   type ProjectContextDocRecord,
 } from "@repo/db";
 import { embedDocContent, MAX_CHUNKS_PER_DOC } from "@repo/repos/server";
-import { requireUser } from "@/lib/auth/server";
+import { requireMyProject } from "@/lib/auth/scope";
 import { toActionError } from "@/lib/action-error";
 
 export async function uploadContextDocAction(
   raw: unknown,
 ): Promise<ActionResult<ProjectContextDocRecord>> {
   try {
-    const user = await requireUser();
     const input = UploadContextDocInputSchema.parse(raw);
 
-    const project = await getProjectByIdForUser(input.projectId, user.id);
-    if (!project) throw new NotFoundError(`Project ${input.projectId} not found`);
+    await requireMyProject(input.projectId);
 
     const doc = await createContextDoc({
       projectId: input.projectId,
@@ -61,15 +58,13 @@ export async function deleteContextDocAction(
   raw: unknown,
 ): Promise<ActionResult<{ docId: string }>> {
   try {
-    const user = await requireUser();
     const { docId } = DeleteContextDocInputSchema.parse(raw);
 
     const doc = await getContextDocById(docId);
     if (!doc) throw new NotFoundError(`Context doc ${docId} not found`);
 
-    // Ownership check: the doc's project must belong to the user.
-    const project = await getProjectByIdForUser(doc.projectId, user.id);
-    if (!project) throw new NotFoundError(`Context doc ${docId} not found`);
+    // Ownership check: the doc's project must belong to the caller's scope.
+    await requireMyProject(doc.projectId);
 
     await deleteContextDoc(docId);
     revalidatePath(`/projects/${doc.projectId}`);

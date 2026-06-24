@@ -9,8 +9,8 @@ import {
 } from "@repo/domain/schemas";
 import type { ActionResult } from "@repo/domain";
 import { NotFoundError } from "@repo/domain";
-import { getFeatureById, getProjectByIdForUser } from "@repo/db";
-import { requireUser } from "@/lib/auth/server";
+import { getFeatureById } from "@repo/db";
+import { requireMyProject } from "@/lib/auth/scope";
 import { toActionError } from "@/lib/action-error";
 import {
   exportToJson,
@@ -34,14 +34,12 @@ export async function exportFeatureAction(
   raw: unknown,
 ): Promise<ActionResult<ExportPayload>> {
   try {
-    const user = await requireUser();
     const { featureId, format } = InputSchema.parse(raw);
 
     const feature = await getFeatureById(featureId);
     if (!feature) throw new NotFoundError(`Feature ${featureId} not found`);
 
-    const project = await getProjectByIdForUser(feature.projectId, user.id);
-    if (!project) throw new NotFoundError(`Project ${feature.projectId} not found`);
+    const project = await requireMyProject(feature.projectId);
 
     const questions = feature.questions
       ? QuestionListSchema.parse(feature.questions)

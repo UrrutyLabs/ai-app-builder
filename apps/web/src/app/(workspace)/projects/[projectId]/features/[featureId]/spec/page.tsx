@@ -3,14 +3,13 @@ import { notFound } from "next/navigation";
 import { FileText, FolderGit2, Lock, Mic } from "lucide-react";
 import {
   getFeatureById,
-  getProjectByIdForUser,
   getRepoByProjectId,
   getSpecVersionById,
   listContextDocsByProjectId,
   listSpecVersionsByFeatureId,
 } from "@repo/db";
 import { AnswerListSchema, FeatureSpecSchema } from "@repo/domain/schemas";
-import { getCurrentUser } from "@/lib/auth/server";
+import { getMyProject } from "@/lib/auth/scope";
 import { Badge } from "@/components/ui/badge";
 import { SpecView } from "@/components/feature/spec-view";
 import { SpecSections } from "@/components/feature/spec-sections";
@@ -29,10 +28,8 @@ export default async function SpecWorkspacePage({
 }) {
   const { projectId, featureId } = await params;
   const { version: viewingId } = await searchParams;
-  const user = await getCurrentUser();
-  if (!user) notFound();
   const [project, feature] = await Promise.all([
-    getProjectByIdForUser(projectId, user.id),
+    getMyProject(projectId),
     getFeatureById(featureId),
   ]);
   if (!project || !feature || feature.projectId !== project.id) notFound();
