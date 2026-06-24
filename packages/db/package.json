@@ -8,6 +8,7 @@
     "./client": "./src/client.ts"
   },
   "scripts": {
+    "postinstall": "prisma generate",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
     "db:generate": "dotenv -e ../../.env -- prisma generate",
