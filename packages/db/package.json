@@ -11,6 +11,7 @@
     "postinstall": "prisma generate",
     "lint": "eslint . --max-warnings 0",
     "check-types": "tsc --noEmit",
+    "db:generate:ci": "prisma generate",
     "db:generate": "dotenv -e ../../.env -- prisma generate",
     "db:migrate": "dotenv -e ../../.env -- prisma migrate dev",
     "db:migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
