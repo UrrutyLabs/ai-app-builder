@@ -25,20 +25,24 @@ enum FeatureStatus {
 }
 
 model Project {
-  id          String               @id @default(cuid())
-  userId      String?
-  name        String
-  mode        Mode
-  description String?
-  specPath    String?
-  planPath    String?
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  features    Feature[]
-  repo        Repo?
-  contextDocs ProjectContextDoc[]
+  id             String               @id @default(cuid())
+  userId         String?
+  // References a Neon Auth (Better Auth) organization id. Nullable during the
+  // single-user → org migration; legacy rows fall back to userId scoping.
+  organizationId String?
+  name           String
+  mode           Mode
+  description    String?
+  specPath       String?
+  planPath       String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  features       Feature[]
+  repo           Repo?
+  contextDocs    ProjectContextDoc[]
 
   @@index([userId])
+  @@index([organizationId])
 }
 
 model Repo {

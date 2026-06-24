@@ -35,6 +35,17 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
 }
 
 /**
+ * The id of the user's currently-active organization, or null if they have no
+ * active org yet (e.g. mid-migration, before a personal org is created/set).
+ * Organizations are managed by Neon Auth (Better Auth org plugin); this just
+ * reads the active one off the session for scoping our own data.
+ */
+export async function getActiveOrganizationId(): Promise<string | null> {
+  const { data } = await auth.getSession();
+  return data?.session?.activeOrganizationId ?? null;
+}
+
+/**
  * Like getCurrentUser, but throws if not signed in. Use from server actions
  * where unauthenticated callers should fail loudly.
  */
