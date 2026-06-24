@@ -1,6 +1,8 @@
 # Pricing — strategy & working notes
 
 > Status: **deliberately deferred.** `Vision.md` §11 lists pricing shape as an open question to defer until design partners reveal willingness to pay. This doc is not a price list — it's the strategy for *this* stage and the instrumentation that will let us set a price with confidence later. Update it as design-partner signal comes in.
+>
+> Roadmap home: [`platform-roadmap.md`](platform-roadmap.md) — Billing & plans pillar (P2 · Monetization).
 
 ## The principle
 

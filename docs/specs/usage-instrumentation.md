@@ -1,6 +1,8 @@
 # Feature brief — Usage & cost instrumentation
 
 > Status: **planned, not started.** Groundwork for pricing — see `docs/pricing.md` ("Instrumentation — the actual build for this stage"). Read `architecture.md` and `conventions.md` before implementing. Scope is the Postgres cost ledger only; PostHog behavioral events are a separate, later PR.
+>
+> Roadmap home: [`platform-roadmap.md`](../platform-roadmap.md) — Usage & observability pillar (P2 · Monetization).
 
 ## Goal
 

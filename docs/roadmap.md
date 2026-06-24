@@ -2,6 +2,8 @@
 
 > Forward-looking, suggested, not committed. Ordering reflects dependencies and leverage, not deadlines. Update this doc when scope or priorities shift.
 >
+> **Scope: the product wedge.** This roadmap covers what makes the *idea → spec → plan → PR* translation better. The conventional SaaS console (orgs, billing, account, settings, audit) lives in [`platform-roadmap.md`](platform-roadmap.md) — see its filing rule before adding an item to either.
+>
 > **Last reconciled against `git log` on 2026-06-23.** Status reflects what's actually in the repo, not what was originally planned.
 >
 > **One scheme.** Earlier drafts mixed `v0.x` version tags with `Phase X` labels. They're now unified: everything shipped is collapsed into **Foundation** below; all forward work is a single **Phase 1 → 5** sequence ordered by leverage. The old `v0.x` tags are retired (kept only as parentheses where useful for git archaeology).
