@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getActiveOrganizationId, getCurrentUser } from "@/lib/auth/server";
 import { listMyProjects } from "@/lib/auth/scope";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarNav } from "@/components/layout/sidebar-nav";
+import { Sidebar } from "@/components/layout/sidebar";
 import { AppHeader } from "@/components/layout/app-header";
 import { EnsurePersonalOrg } from "@/components/auth/ensure-personal-org";
 
@@ -34,9 +34,7 @@ export default async function WorkspaceLayout({
         slugSeed={user.id}
       />
       <div className="flex min-h-screen">
-        <aside className="hidden w-60 shrink-0 flex-col border-r bg-muted/30 md:flex">
-          <SidebarNav projects={projectNav} />
-        </aside>
+        <Sidebar projects={projectNav} />
         <div className="flex min-w-0 flex-1 flex-col">
           <AppHeader
             projects={projectNav}

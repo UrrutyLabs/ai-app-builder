@@ -60,14 +60,16 @@ export default async function OrgSettingsPage() {
         <h2 className="text-sm font-medium uppercase tracking-wide text-destructive">
           Danger zone
         </h2>
-        <div className="flex items-center justify-between rounded-lg border border-destructive/40 p-4">
+        <div className="flex items-center justify-between rounded-lg border border-destructive bg-destructive/5 p-4">
           <div className="text-sm">
-            <div className="font-medium">Delete organization</div>
-            <div className="text-muted-foreground">
+            <div className="font-medium text-destructive">
+              Delete organization
+            </div>
+            <div className="text-destructive/80">
               Permanently remove the org and all its projects.
             </div>
           </div>
-          <Button variant="outline" disabled>
+          <Button variant="destructive" disabled>
             Delete
           </Button>
         </div>

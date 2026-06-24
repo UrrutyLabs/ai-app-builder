@@ -8,11 +8,19 @@ import {
   CreditCard,
   LayoutDashboard,
   LayoutGrid,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plug,
   Settings,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export interface ProjectLite {
   id: string;
@@ -25,9 +33,10 @@ export function activeProjectId(pathname: string): string | null {
   return id && id !== "new" ? id : null;
 }
 
-function itemClass(active: boolean): string {
+function itemClass(active: boolean, collapsed: boolean): string {
   return cn(
-    "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
+    "flex items-center rounded-md text-sm transition-colors",
+    collapsed ? "justify-center p-2" : "gap-2.5 px-2.5 py-1.5",
     active
       ? "bg-accent text-accent-foreground font-medium"
       : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
@@ -42,6 +51,42 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+/** A nav link that renders icon-only (with a hover tooltip) when collapsed. */
+function NavItem({
+  href,
+  label,
+  icon: Icon,
+  active,
+  collapsed,
+  onNavigate,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  active: boolean;
+  collapsed: boolean;
+  onNavigate: () => void;
+}) {
+  const link = (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      aria-label={collapsed ? label : undefined}
+      className={itemClass(active, collapsed)}
+    >
+      <Icon className="size-4 shrink-0" aria-hidden="true" />
+      {collapsed ? null : <span className="truncate">{label}</span>}
+    </Link>
+  );
+  if (!collapsed) return link;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{link}</TooltipTrigger>
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
+
 const ORG_NAV = [
   { href: "/", label: "Projects", icon: LayoutGrid },
   { href: "/people", label: "People", icon: Users },
@@ -52,9 +97,13 @@ const ORG_NAV = [
 
 export function SidebarNav({
   projects,
+  collapsed = false,
+  onToggle,
   onNavigate = () => {},
 }: {
   projects: ProjectLite[];
+  collapsed?: boolean;
+  onToggle?: () => void;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
@@ -64,58 +113,67 @@ export function SidebarNav({
     : null;
 
   return (
-    <div className="flex h-full flex-col gap-1 p-3">
+    <div
+      className={cn(
+        "flex h-full flex-col gap-1",
+        collapsed ? "p-2" : "p-3",
+      )}
+    >
       <Link
         href="/"
         onClick={onNavigate}
-        className="mb-2 flex items-center gap-2 px-2.5 py-1 font-medium"
+        aria-label="Loop home"
+        className={cn(
+          "mb-2 flex items-center py-1 font-medium",
+          collapsed ? "justify-center" : "gap-2 px-2.5",
+        )}
       >
-        <CircleDot className="size-4 text-primary" aria-hidden="true" />
-        Loop
+        <CircleDot className="size-4 shrink-0 text-primary" aria-hidden="true" />
+        {collapsed ? null : "Loop"}
       </Link>
 
       {projectId ? (
         <>
-          <Link
+          <NavItem
             href="/"
-            onClick={onNavigate}
-            className="flex items-center gap-2 px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ChevronLeft className="size-4" aria-hidden="true" />
-            All projects
-          </Link>
+            label="All projects"
+            icon={ChevronLeft}
+            active={false}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
 
-          <SectionLabel>Project</SectionLabel>
+          {collapsed ? null : <SectionLabel>Project</SectionLabel>}
           <nav className="flex flex-col gap-0.5">
-            <span className="truncate px-2.5 py-1 text-sm font-medium">
-              {project?.name ?? "Project"}
-            </span>
-            <Link
+            {collapsed ? null : (
+              <span className="truncate px-2.5 py-1 text-sm font-medium">
+                {project?.name ?? "Project"}
+              </span>
+            )}
+            <NavItem
               href={`/projects/${projectId}`}
-              onClick={onNavigate}
-              className={itemClass(
+              label="Overview"
+              icon={LayoutDashboard}
+              active={
                 pathname === `/projects/${projectId}` ||
-                  pathname.startsWith(`/projects/${projectId}/features`),
-              )}
-            >
-              <LayoutDashboard className="size-4" aria-hidden="true" />
-              Overview
-            </Link>
-            <Link
+                pathname.startsWith(`/projects/${projectId}/features`)
+              }
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+            />
+            <NavItem
               href={`/projects/${projectId}/settings`}
-              onClick={onNavigate}
-              className={itemClass(
-                pathname === `/projects/${projectId}/settings`,
-              )}
-            >
-              <Settings className="size-4" aria-hidden="true" />
-              Settings
-            </Link>
+              label="Settings"
+              icon={Settings}
+              active={pathname === `/projects/${projectId}/settings`}
+              collapsed={collapsed}
+              onNavigate={onNavigate}
+            />
           </nav>
         </>
       ) : (
         <>
-          <SectionLabel>Organization</SectionLabel>
+          {collapsed ? null : <SectionLabel>Organization</SectionLabel>}
           <nav className="flex flex-col gap-0.5">
             {ORG_NAV.map((item) => {
               const active =
@@ -123,20 +181,62 @@ export function SidebarNav({
                   ? pathname === "/" || pathname.startsWith("/projects")
                   : pathname.startsWith(item.href);
               return (
-                <Link
+                <NavItem
                   key={item.href}
                   href={item.href}
-                  onClick={onNavigate}
-                  className={itemClass(active)}
-                >
-                  <item.icon className="size-4" aria-hidden="true" />
-                  {item.label}
-                </Link>
+                  label={item.label}
+                  icon={item.icon}
+                  active={active}
+                  collapsed={collapsed}
+                  onNavigate={onNavigate}
+                />
               );
             })}
           </nav>
         </>
       )}
+
+      {onToggle ? (
+        <CollapseToggle collapsed={collapsed} onToggle={onToggle} />
+      ) : null}
+    </div>
+  );
+}
+
+function CollapseToggle({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  const button = (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      className={cn(
+        "mt-auto flex items-center rounded-md text-sm text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground",
+        collapsed ? "justify-center p-2" : "gap-2.5 px-2.5 py-1.5",
+      )}
+    >
+      {collapsed ? (
+        <PanelLeftOpen className="size-4 shrink-0" aria-hidden="true" />
+      ) : (
+        <>
+          <PanelLeftClose className="size-4 shrink-0" aria-hidden="true" />
+          <span>Collapse</span>
+        </>
+      )}
+    </button>
+  );
+  if (!collapsed) return button;
+  return (
+    <div className="mt-auto">
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent side="right">Expand sidebar</TooltipContent>
+      </Tooltip>
     </div>
   );
 }
