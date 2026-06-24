@@ -2,7 +2,7 @@
 
 > The **conventional** side of the product — the console and SaaS plumbing you'd build for *any* tool of this kind, regardless of what it does. Kept separate from `roadmap.md` (the product wedge) on purpose: mixing "make the spec pipeline better" with "build billing" makes both harder to read.
 >
-> **Last reconciled against `git log` on 2026-06-23.** Status reflects what's in the repo, not what was planned.
+> **Last reconciled against `git log` on 2026-06-24.** Status reflects what's in the repo, not what was planned.
 >
 > **Numbering.** Forward work here is **P0 → P3**, deliberately distinct from the product roadmap's **Phase 1 → 5** so the two can't be confused. Both can run in parallel.
 
@@ -21,9 +21,11 @@ When in doubt: if removing the feature would still leave Loop a worse *generic* 
 
 ## Current state — shipped
 
-- **Identity & access** ✓ (partial) — Neon Auth (Better Auth): email sign-in, `Project.userId` scoping, orphan-claim. No organizations/teams yet.
-- **Console UX** ✓ — two-tier shell: org-scoped nav (Projects · People · Billing · Integrations · Settings) and project-scoped nav (Overview · Settings), org + project switchers in the header, account menu (name/email · theme · sign out). Adaptive off the route.
-- **Surfaces stubbed** — People, Billing (Free/Pro cards), Integrations (connector grid), org + project Settings, and a usage-cards row on Projects all exist as intentional placeholders. The nav/UX is locked; the backends are not built.
+- **Identity & access** ✓ — Neon Auth (Better Auth) with the **organization plugin**: email sign-in; **organizations** (personal org auto-created on first workspace load, legacy projects backfilled into it); `Project.organizationId` scoping with **membership-verified** access (the active-org id is re-checked against live membership, fail-open on transient errors); a **real org switcher** (list / switch / create). Legacy `userId` fallback retained so nothing disappeared mid-migration.
+- **Account** ✓ — Better Auth account surfaces wired at `/account` (profile, security, password, sessions, 2FA) via Neon Auth UI's `AccountView`; reachable from the account menu.
+- **Settings** ✓ (partial) — org **name/slug editable** against the real org record; danger zone restyled. Org/project **delete** deliberately still disabled (wants a confirm flow).
+- **Console UX** ✓ — two-tier shell: org-scoped nav (Projects · People · Billing · Integrations · Settings) and project-scoped nav (Overview · Settings); org + project switchers; account menu (account settings · theme · sign out); **collapsible icon-rail sidebar** (state persisted). Adaptive off the route.
+- **Surfaces stubbed** — People, Billing (Free/Pro cards), Integrations (connector grid), and a usage-cards row on Projects remain intentional placeholders. The nav/UX is locked; those backends are not built.
 
 **Platform briefs that already exist** (homeless until now — this doc owns them):
 - `pricing.md` — pricing strategy (charge in feedback now; usage-based later given real COGS).
@@ -31,11 +33,11 @@ When in doubt: if removing the feature would still leave Loop a worse *generic* 
 
 ---
 
-## The keystone
+## The keystone — ✅ shipped (P0)
 
-Almost everything below is gated on one thing: **Organizations**. Adopt the Better Auth `organization` plugin (already shipped in the dependency) for orgs / members / invitations / roles, add `Project.organizationId`, and move access checks from "user owns project" to "user is a member of the project's org." This extends the existing auth work; the migration assigns each existing project to its owner's personal org.
+Almost everything below was gated on one thing: **Organizations**. This is now in: the Better Auth `organization` plugin is adopted (orgs / members / invitations / roles), `Project.organizationId` exists with a migration, and access checks moved from "user owns project" to "user is a **member** of the project's active org." Each existing project was assigned to its owner's auto-created personal org; the legacy `userId` path is kept as a fallback.
 
-Build P0 first. After it, the placeholders start becoming real.
+With the keystone in, the placeholders can start becoming real — P1 onward.
 
 ---
 
@@ -43,23 +45,24 @@ Build P0 first. After it, the placeholders start becoming real.
 
 Each pillar has a maturity ladder (none → minimal → complete). Pillars are stable; the rungs are the work.
 
-- **Identity & access** — auth ✓ → organizations → membership → roles/RBAC → SSO
-- **Account** — profile → security (2FA / sessions) → notification prefs → personal API tokens
+- **Identity & access** — auth ✓ → organizations ✓ → membership ✓ → roles/RBAC → SSO
+- **Account** — profile ✓ → security (2FA / sessions) ✓ → notification prefs → personal API tokens
 - **Billing & plans** — Stripe customer → plans → usage metering → invoices/payment → dunning/enterprise terms
 - **Usage & observability** — cost ledger → usage dashboards → audit log → status/health
 - **Integrations platform** — connector framework → GitHub App → Linear/Jira/Slack → webhooks/public API
-- **Settings & config** — org settings → default models/policies → danger zone
-- **Console UX** — shell ✓ → global search (⌘K) → notifications inbox → onboarding → help/changelog
+- **Settings & config** — org settings ✓ → default models/policies → danger zone (styled; delete not wired)
+- **Console UX** — shell ✓ (collapsible) → global search (⌘K) → notifications inbox → onboarding → help/changelog
 
 ---
 
 ## Phases
 
-### P0 · Foundation (the keystone)
+### P0 · Foundation (the keystone) — ✅ Shipped 2026-06-24
 The unlock. Mostly auth + a migration; little net-new UI.
-- **Identity & access** — Better Auth org plugin; `Project.organizationId` + migration; personal org auto-created on signup; access via membership; org switcher becomes real.
-- **Account** — wire the Better Auth account surfaces: profile, security (password/2FA/sessions). Mostly configuration.
-- **Settings** — make org name/slug actually editable (real org record behind the stub).
+- **Identity & access** ✓ — Better Auth org plugin; `Project.organizationId` + migration; personal org auto-created (first workspace load) + legacy backfill; membership-verified access; real org switcher (list / switch / create).
+- **Account** ✓ — Better Auth account surfaces wired (`/account`: profile, security, password, sessions, 2FA).
+- **Settings** ✓ — org name/slug editable against the real org record.
+- *Deferred:* org/project **delete** (disabled, needs a confirm flow); wiring the auth provider's nav to the Next router (account nav currently full-page reloads).
 
 ### P1 · Team-ready
 Turn the single-player tool into a team tool.
