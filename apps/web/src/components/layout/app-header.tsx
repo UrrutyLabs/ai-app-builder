@@ -11,7 +11,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { HeaderUserMenu } from "@/components/auth/header-user-menu";
 import {
   SidebarNav,
   activeProjectId,
@@ -19,14 +18,18 @@ import {
 } from "./sidebar-nav";
 import { OrgSwitcher } from "./org-switcher";
 import { ProjectSwitcher } from "./project-switcher";
-import { ThemeToggle } from "./theme-toggle";
+import { UserMenu } from "./user-menu";
 
 export function AppHeader({
   projects,
   orgName,
+  userName,
+  userEmail,
 }: {
   projects: ProjectLite[];
   orgName: string;
+  userName: string | null;
+  userEmail: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -59,19 +62,14 @@ export function AppHeader({
         </>
       ) : null}
 
-      <div className="ml-auto flex items-center gap-2">
-        <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-          <span className="size-1.5 rounded-full bg-emerald-500" />
-          All systems OK
-        </span>
+      <div className="ml-auto flex items-center gap-3">
         <Link
           href="/billing"
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
           Upgrade
         </Link>
-        <ThemeToggle />
-        <HeaderUserMenu />
+        <UserMenu name={userName} email={userEmail} />
       </div>
     </header>
   );
