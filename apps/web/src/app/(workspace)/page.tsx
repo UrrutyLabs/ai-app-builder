@@ -25,6 +25,13 @@ export default async function DashboardPage() {
     countUnclaimedProjects(),
   ]);
 
+  const usage = [
+    { label: "Tokens this month", value: "—" },
+    { label: "Specs generated", value: "—" },
+    { label: "Plans generated", value: "—" },
+    { label: "PRs opened", value: "—" },
+  ];
+
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       {unclaimedCount > 0 ? (
@@ -37,6 +44,22 @@ export default async function DashboardPage() {
           <Plus className="size-4" aria-hidden="true" />
           New project
         </Link>
+      </div>
+
+      <div>
+        <div className="grid grid-cols-2 gap-3 rounded-lg border bg-card p-4 sm:grid-cols-4">
+          {usage.map((u) => (
+            <div key={u.label}>
+              <div className="text-xs text-muted-foreground">{u.label}</div>
+              <div className="mt-1 text-2xl font-semibold tracking-tight">
+                {u.value}
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Usage tracking is coming soon.
+        </p>
       </div>
 
       {projects.length === 0 ? (

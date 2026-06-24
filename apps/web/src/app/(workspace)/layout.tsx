@@ -20,6 +20,8 @@ export default async function WorkspaceLayout({
     id: p.id,
     name: p.name,
   }));
+  // Placeholder org name until real organizations land.
+  const orgName = user.name?.trim() || "Personal";
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -28,7 +30,7 @@ export default async function WorkspaceLayout({
           <SidebarNav projects={projects} />
         </aside>
         <div className="flex min-w-0 flex-1 flex-col">
-          <AppHeader projects={projects} />
+          <AppHeader projects={projects} orgName={orgName} />
           <main className="flex-1 px-6 py-8">{children}</main>
         </div>
       </div>

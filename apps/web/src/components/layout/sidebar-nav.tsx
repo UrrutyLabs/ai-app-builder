@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleDot, Folder, LayoutDashboard, Plus } from "lucide-react";
+import {
+  ChevronLeft,
+  CircleDot,
+  CreditCard,
+  LayoutDashboard,
+  LayoutGrid,
+  Plug,
+  Settings,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ProjectLite {
@@ -10,19 +19,37 @@ export interface ProjectLite {
   name: string;
 }
 
+/** Returns the active project id from the path, or null on org-level routes. */
+export function activeProjectId(pathname: string): string | null {
+  const id = pathname.match(/^\/projects\/([^/]+)/)?.[1];
+  return id && id !== "new" ? id : null;
+}
+
 function itemClass(active: boolean): string {
   return cn(
-    "flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm transition-colors",
+    "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
     active
       ? "bg-accent text-accent-foreground font-medium"
       : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
   );
 }
 
-/**
- * Shared sidebar body. Rendered both in the persistent desktop aside and in
- * the mobile Sheet. `onNavigate` lets the Sheet close itself on link click.
- */
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="mt-4 mb-1 px-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
+      {children}
+    </p>
+  );
+}
+
+const ORG_NAV = [
+  { href: "/", label: "Projects", icon: LayoutGrid },
+  { href: "/people", label: "People", icon: Users },
+  { href: "/billing", label: "Billing", icon: CreditCard },
+  { href: "/integrations", label: "Integrations", icon: Plug },
+  { href: "/settings", label: "Settings", icon: Settings },
+] as const;
+
 export function SidebarNav({
   projects,
   onNavigate = () => {},
@@ -31,6 +58,10 @@ export function SidebarNav({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const projectId = activeProjectId(pathname);
+  const project = projectId
+    ? projects.find((p) => p.id === projectId)
+    : null;
 
   return (
     <div className="flex h-full flex-col gap-1 p-3">
@@ -43,50 +74,69 @@ export function SidebarNav({
         Loop
       </Link>
 
-      <Link
-        href="/"
-        onClick={onNavigate}
-        className={itemClass(pathname === "/")}
-      >
-        <LayoutDashboard className="size-4" aria-hidden="true" />
-        Dashboard
-      </Link>
+      {projectId ? (
+        <>
+          <Link
+            href="/"
+            onClick={onNavigate}
+            className="flex items-center gap-2 px-2.5 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ChevronLeft className="size-4" aria-hidden="true" />
+            All projects
+          </Link>
 
-      <p className="mt-4 px-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
-        Projects
-      </p>
-
-      <nav className="flex flex-col gap-0.5">
-        {projects.length === 0 ? (
-          <span className="px-2.5 py-1.5 text-sm text-muted-foreground/70">
-            No projects yet
-          </span>
-        ) : (
-          projects.map((p) => (
+          <SectionLabel>Project</SectionLabel>
+          <nav className="flex flex-col gap-0.5">
+            <span className="truncate px-2.5 py-1 text-sm font-medium">
+              {project?.name ?? "Project"}
+            </span>
             <Link
-              key={p.id}
-              href={`/projects/${p.id}`}
+              href={`/projects/${projectId}`}
               onClick={onNavigate}
-              className={itemClass(pathname.startsWith(`/projects/${p.id}`))}
+              className={itemClass(
+                pathname === `/projects/${projectId}` ||
+                  pathname.startsWith(`/projects/${projectId}/features`),
+              )}
             >
-              <Folder className="size-4 shrink-0" aria-hidden="true" />
-              <span className="truncate">{p.name}</span>
+              <LayoutDashboard className="size-4" aria-hidden="true" />
+              Overview
             </Link>
-          ))
-        )}
-      </nav>
-
-      <Link
-        href="/projects/new"
-        onClick={onNavigate}
-        className={cn(
-          itemClass(pathname === "/projects/new"),
-          "mt-1 text-muted-foreground",
-        )}
-      >
-        <Plus className="size-4" aria-hidden="true" />
-        New project
-      </Link>
+            <Link
+              href={`/projects/${projectId}/settings`}
+              onClick={onNavigate}
+              className={itemClass(
+                pathname === `/projects/${projectId}/settings`,
+              )}
+            >
+              <Settings className="size-4" aria-hidden="true" />
+              Settings
+            </Link>
+          </nav>
+        </>
+      ) : (
+        <>
+          <SectionLabel>Organization</SectionLabel>
+          <nav className="flex flex-col gap-0.5">
+            {ORG_NAV.map((item) => {
+              const active =
+                item.href === "/"
+                  ? pathname === "/" || pathname.startsWith("/projects")
+                  : pathname.startsWith(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={onNavigate}
+                  className={itemClass(active)}
+                >
+                  <item.icon className="size-4" aria-hidden="true" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </>
+      )}
     </div>
   );
 }
