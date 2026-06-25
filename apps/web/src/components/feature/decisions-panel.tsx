@@ -2,7 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Plus, X } from "lucide-react";
+import {
+  Check,
+  FileText,
+  MessageCircleQuestion,
+  Mic,
+  Plus,
+  Sparkles,
+  User,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,7 +27,39 @@ export type DecisionLite = {
   kind: "DECISION" | "CONSTRAINT" | "OPEN_QUESTION";
   status: "OPEN" | "ACCEPTED" | "SUPERSEDED" | "REJECTED";
   statement: string;
+  sourceType:
+    | "TRANSCRIPT"
+    | "CONTEXT_DOC"
+    | "CLARIFYING_ANSWER"
+    | "HUMAN_EDIT"
+    | "AI_PROPOSAL";
+  // Human-readable provenance (e.g. the doc title, "transcript", "you").
+  sourceLabel: string;
 };
+
+const SOURCE_ICON: Record<DecisionLite["sourceType"], LucideIcon> = {
+  TRANSCRIPT: Mic,
+  CONTEXT_DOC: FileText,
+  CLARIFYING_ANSWER: MessageCircleQuestion,
+  HUMAN_EDIT: User,
+  AI_PROPOSAL: Sparkles,
+};
+
+function SourceChip({
+  sourceType,
+  label,
+}: {
+  sourceType: DecisionLite["sourceType"];
+  label: string;
+}) {
+  const Icon = SOURCE_ICON[sourceType];
+  return (
+    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+      <Icon className="size-3" aria-hidden="true" />
+      {label}
+    </span>
+  );
+}
 
 const KIND_LABEL: Record<DecisionLite["kind"], string> = {
   DECISION: "Decisions",
@@ -84,14 +126,20 @@ export function DecisionsPanel({
                   key={d.id}
                   className="flex items-start justify-between gap-3 text-sm"
                 >
-                  <span
-                    className={cn(
-                      "flex-1 text-foreground/80",
-                      d.status === "REJECTED" &&
-                        "text-muted-foreground line-through",
-                    )}
-                  >
-                    {d.statement}
+                  <span className="flex flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                    <span
+                      className={cn(
+                        "text-foreground/80",
+                        d.status === "REJECTED" &&
+                          "text-muted-foreground line-through",
+                      )}
+                    >
+                      {d.statement}
+                    </span>
+                    <SourceChip
+                      sourceType={d.sourceType}
+                      label={d.sourceLabel}
+                    />
                   </span>
                   <div className="flex shrink-0 items-center gap-1">
                     <StatusButton

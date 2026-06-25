@@ -17,7 +17,6 @@ import { Badge } from "@/components/ui/badge";
 import { GenerateQuestionsButton } from "@/components/feature/generate-questions-button";
 import { AnswerForm } from "@/components/feature/answer-form";
 import { ExportButtons } from "@/components/feature/export-buttons";
-import { DecisionsPanel } from "@/components/feature/decisions-panel";
 import { CollapsibleStage } from "@/components/feature/collapsible-stage";
 
 export const dynamic = "force-dynamic";
@@ -119,12 +118,16 @@ export default async function FeaturePage({
   const plan = feature.plan
     ? ImplementationPlanSchema.parse(feature.plan)
     : null;
-  const decisions = (await listDecisionsByFeature(feature.id)).map((d) => ({
-    id: d.id,
-    kind: d.kind,
-    status: d.status,
-    statement: d.statement,
-  }));
+  const decisionRecords = await listDecisionsByFeature(feature.id);
+  const openDecisionCount = decisionRecords.filter(
+    (d) => d.status === "OPEN",
+  ).length;
+  const ideaSummary =
+    decisionRecords.length === 0
+      ? "Review the idea · add decisions"
+      : `${decisionRecords.length} decision${
+          decisionRecords.length === 1 ? "" : "s"
+        }${openDecisionCount > 0 ? ` · ${openDecisionCount} open` : ""}`;
 
   const hasQuestions = !!questions && questions.length > 0;
   const hasAnswers = !!answers && answers.length > 0;
@@ -202,20 +205,12 @@ export default async function FeaturePage({
       </div>
 
       <div className="space-y-2">
-        <CollapsibleStage
+        <StageLinkRow
+          state="done"
           label="Idea"
-          summary={feature.idea}
-          icon={<StageIcon state="done" />}
-        >
-          <p className="whitespace-pre-wrap text-sm">{feature.idea}</p>
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">
-              Decisions ground every downstream step — accept, reject, or add
-              your own.
-            </p>
-            <DecisionsPanel featureId={feature.id} decisions={decisions} />
-          </div>
-        </CollapsibleStage>
+          summary={ideaSummary}
+          href={`${hubHref}/idea`}
+        />
 
         <CollapsibleStage
           label="Q&A"
