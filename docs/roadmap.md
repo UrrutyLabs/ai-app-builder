@@ -47,7 +47,7 @@ The grounding features are done; what's left is non-feature work to get this in 
 Make a handful of teams sticky (Vision §10). This is where the wedge produces its actual output.
 
 - **Tickets out (projection)** — render + sync an approved spec to Linear/Jira with acceptance criteria. A ticket is an *emitted view*, not the source of truth; this is the missing exit (Vision §3).
-- **Provenance MVP = the `Decision` entity** — record the *source* of each spec field (transcript / doc / AI / human edit) as first-class, provenanced decisions. The seam toward the `Initiative → Decision → Feature → Change` spine; see [`decisions/0001`](decisions/0001-decisions-not-tickets.md).
+- **Provenance MVP = the `Decision` entity** — record the *source* of each spec field (transcript / doc / AI / human edit) as first-class, provenanced decisions. The seam toward the `Initiative → Decision → Feature → Change` spine; see [`decisions/0001`](decisions/0001-decisions-not-tickets.md) and the build plan in [`specs/decision-entity.md`](specs/decision-entity.md).
 - **PR-quality hardening** against partners' real repos — the codegen loop's failure modes only surface on real codebases.
 
 ## Phase 3 — Collaboration & multiplayer

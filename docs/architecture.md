@@ -387,7 +387,7 @@ The branch is pushed and a PR opened via `@repo/repos` (`pull-request.ts`); `prU
 Tracked in `roadmap.md`. Not built yet:
 
 - **Tickets out (projection)** — render + sync an approved spec to Linear/Jira; a ticket is an emitted view, not the source of truth.
-- **Provenance / lineage** — record the source of each artifact field as a first-class `Decision`, the first step toward the `Initiative → Decision → Feature → Change` spine. Context docs and transcripts already give every retrievable chunk a stable `(sourceType, sourceId)`, which is the seam this builds on. See [`decisions/0001-decisions-not-tickets.md`](decisions/0001-decisions-not-tickets.md).
+- **Provenance / lineage** — record the source of each artifact field as a first-class `Decision`, the first step toward the `Initiative → Decision → Feature → Change` spine. Context docs and transcripts already give every retrievable chunk a stable `(sourceType, sourceId)`, which is the seam this builds on. See [`decisions/0001-decisions-not-tickets.md`](decisions/0001-decisions-not-tickets.md); build plan in [`specs/decision-entity.md`](specs/decision-entity.md).
 - **Collaboration** — per-section spec comments; real-time multiplayer editing.
 - **Outcome tracking** — cycle-time metrics, spec-drift detection, plan-accuracy feedback.
 - **Enterprise** — multi-LLM provider abstraction, org-level prompt customization, custom `FeatureSpec` fields.
