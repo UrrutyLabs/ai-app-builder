@@ -90,10 +90,10 @@ model Feature {
   prUrl             String?
   prCreatedAt       DateTime?
   transcript        String?
-  transcriptContext Json?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   specVersions      SpecVersion[]
+  decisions         Decision[]
 }
 
 model SpecVersion {
@@ -105,6 +105,50 @@ model SpecVersion {
   createdAt DateTime @default(now())
 
   @@index([featureId, createdAt])
+}
+
+enum DecisionKind {
+  DECISION
+  CONSTRAINT
+  OPEN_QUESTION
+}
+
+enum DecisionStatus {
+  OPEN
+  ACCEPTED
+  SUPERSEDED
+  REJECTED
+}
+
+enum DecisionSource {
+  TRANSCRIPT
+  CLARIFYING_ANSWER
+  CONTEXT_DOC
+  HUMAN_EDIT
+  AI_PROPOSAL
+}
+
+// A single resolved choice with provenance — the spine node the spec
+// materializes from. See docs/specs/decision-entity.md and
+// docs/decisions/0001-decisions-not-tickets.md.
+model Decision {
+  id         String         @id @default(cuid())
+  featureId  String
+  feature    Feature        @relation(fields: [featureId], references: [id], onDelete: Cascade)
+  kind       DecisionKind
+  status     DecisionStatus
+  statement  String
+  rationale  String?
+  // Provenance — same (sourceType, sourceId) shape retrieval already uses.
+  // sourceId is interpreted per sourceType (e.g. the originating feature).
+  sourceType DecisionSource
+  sourceId   String?
+  createdBy  String // user id, or "ai" for machine-distilled
+  createdAt  DateTime       @default(now())
+  decidedAt  DateTime?
+
+  @@index([featureId])
+  @@index([featureId, status])
 }
 
 model ProjectContextDoc {

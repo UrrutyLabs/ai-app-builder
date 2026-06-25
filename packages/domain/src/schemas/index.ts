@@ -8,4 +8,6 @@ export * from "./implementation-plan";
 export * from "./repo";
 export * from "./conventions";
 export * from "./transcript-extraction";
+export * from "./document-extraction";
 export * from "./context-doc";
+export * from "./decision";

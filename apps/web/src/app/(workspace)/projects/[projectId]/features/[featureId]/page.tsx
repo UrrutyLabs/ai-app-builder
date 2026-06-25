@@ -4,6 +4,7 @@ import { ArrowRight, Circle, CircleCheck, CircleDot, Lock } from "lucide-react";
 import {
   countSpecVersionsByFeatureId,
   getFeatureById,
+  listDecisionsByFeature,
 } from "@repo/db";
 import {
   AnswerListSchema,
@@ -16,9 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { GenerateQuestionsButton } from "@/components/feature/generate-questions-button";
 import { AnswerForm } from "@/components/feature/answer-form";
 import { ExportButtons } from "@/components/feature/export-buttons";
-import { TranscriptContextView } from "@/components/feature/transcript-context-view";
 import { CollapsibleStage } from "@/components/feature/collapsible-stage";
-import { parseTranscriptContext } from "@/lib/transcript-context";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +118,16 @@ export default async function FeaturePage({
   const plan = feature.plan
     ? ImplementationPlanSchema.parse(feature.plan)
     : null;
-  const transcriptContext = parseTranscriptContext(feature.transcriptContext);
+  const decisionRecords = await listDecisionsByFeature(feature.id);
+  const openDecisionCount = decisionRecords.filter(
+    (d) => d.status === "OPEN",
+  ).length;
+  const ideaSummary =
+    decisionRecords.length === 0
+      ? "Review the idea · add decisions"
+      : `${decisionRecords.length} decision${
+          decisionRecords.length === 1 ? "" : "s"
+        }${openDecisionCount > 0 ? ` · ${openDecisionCount} open` : ""}`;
 
   const hasQuestions = !!questions && questions.length > 0;
   const hasAnswers = !!answers && answers.length > 0;
@@ -197,22 +205,12 @@ export default async function FeaturePage({
       </div>
 
       <div className="space-y-2">
-        <CollapsibleStage
+        <StageLinkRow
+          state="done"
           label="Idea"
-          summary={feature.idea}
-          icon={<StageIcon state="done" />}
-        >
-          <p className="whitespace-pre-wrap text-sm">{feature.idea}</p>
-          {transcriptContext ? (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Distilled from the refinement transcript — fed into every
-                downstream step.
-              </p>
-              <TranscriptContextView context={transcriptContext} />
-            </div>
-          ) : null}
-        </CollapsibleStage>
+          summary={ideaSummary}
+          href={`${hubHref}/idea`}
+        />
 
         <CollapsibleStage
           label="Q&A"

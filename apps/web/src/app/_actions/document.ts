@@ -1,34 +1,42 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import {
-  ExtractFromTranscriptInputSchema,
+  ExtractFromDocumentInputSchema,
   type NewDecision,
 } from "@repo/domain/schemas";
 import type { ActionResult } from "@repo/domain";
-import { extractFromTranscript } from "@repo/ai";
+import { NotFoundError } from "@repo/domain";
+import { extractFromDocument } from "@repo/ai";
 import {
   createFeatureWithDecisions,
+  getContextDocById,
   getRepoByProjectId,
-  type FeatureRecord,
 } from "@repo/db";
-import {
-  summarizeConventions,
-  summarizeTree,
-} from "@repo/repos";
+import { summarizeConventions, summarizeTree } from "@repo/repos";
 import { requireMyProject } from "@/lib/auth/scope";
 import { toActionError } from "@/lib/action-error";
 import { retrieveProjectContext } from "@/lib/context-retrieval";
 
-export async function extractFromTranscriptAction(
-  raw: unknown,
-): Promise<ActionResult<FeatureRecord>> {
-  let feature: FeatureRecord;
-  try {
-    const input = ExtractFromTranscriptInputSchema.parse(raw);
+export interface DocumentExtractionResult {
+  projectId: string;
+  featureId: string;
+  // Other features the document describes, surfaced (not created) so the user
+  // can spin them up separately. One feature per document for now.
+  otherFeaturesDetected: string[];
+}
 
+export async function extractFromDocumentAction(
+  raw: unknown,
+): Promise<ActionResult<DocumentExtractionResult>> {
+  try {
+    const input = ExtractFromDocumentInputSchema.parse(raw);
     const project = await requireMyProject(input.projectId);
+
+    const doc = await getContextDocById(input.contextDocId);
+    if (!doc || doc.projectId !== input.projectId) {
+      throw new NotFoundError(`Document ${input.contextDocId} not found`);
+    }
 
     const repo = await getRepoByProjectId(input.projectId);
     const repoContext = repo?.fileTree ? summarizeTree(repo.fileTree) : null;
@@ -38,11 +46,12 @@ export async function extractFromTranscriptAction(
 
     const { codeContext, docsContext } = await retrieveProjectContext({
       projectId: input.projectId,
-      query: input.transcript.slice(0, 4000),
+      query: doc.content.slice(0, 4000),
     });
 
-    const extraction = await extractFromTranscript({
-      transcript: input.transcript,
+    const extraction = await extractFromDocument({
+      documentTitle: doc.title,
+      document: doc.content,
       mode: project.mode,
       repoContext,
       conventionsContext,
@@ -50,9 +59,8 @@ export async function extractFromTranscriptAction(
       docsContext,
     });
 
-    // Distilled transcript items become first-class decisions (provenance:
-    // TRANSCRIPT, machine-distilled → createdBy "ai"). Settled items are
-    // ACCEPTED; open questions stay OPEN to seed the questions/spec step.
+    // Distilled document items → decisions with CONTEXT_DOC provenance pointing
+    // at the source doc. Machine-distilled → createdBy "ai".
     const mk = (
       kind: NewDecision["kind"],
       status: NewDecision["status"],
@@ -62,7 +70,8 @@ export async function extractFromTranscriptAction(
         kind,
         status,
         statement,
-        sourceType: "TRANSCRIPT",
+        sourceType: "CONTEXT_DOC",
+        sourceId: input.contextDocId,
         createdBy: "ai",
       }));
     const decisions: NewDecision[] = [
@@ -71,16 +80,23 @@ export async function extractFromTranscriptAction(
       ...mk("OPEN_QUESTION", "OPEN", extraction.openQuestions),
     ];
 
-    feature = await createFeatureWithDecisions({
+    const feature = await createFeatureWithDecisions({
       projectId: input.projectId,
       title: extraction.title,
       idea: extraction.idea,
-      transcript: input.transcript,
       decisions,
     });
+
     revalidatePath(`/projects/${input.projectId}`);
+    return {
+      ok: true,
+      data: {
+        projectId: input.projectId,
+        featureId: feature.id,
+        otherFeaturesDetected: extraction.otherFeaturesDetected,
+      },
+    };
   } catch (err) {
     return { ok: false, error: toActionError(err) };
   }
-  redirect(`/projects/${feature.projectId}/features/${feature.id}`);
 }

@@ -18,3 +18,5 @@ export type {
 } from "./steps/check-consistency";
 export { extractFromTranscript } from "./steps/extract-from-transcript";
 export type { ExtractFromTranscriptInput } from "./steps/extract-from-transcript";
+export { extractFromDocument } from "./steps/extract-from-document";
+export type { ExtractFromDocumentInput } from "./steps/extract-from-document";
