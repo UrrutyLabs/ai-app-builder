@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
   CreateFeatureInputSchema,
+  ExtractFromDocumentInputSchema,
   ExtractFromTranscriptInputSchema,
   type CreateFeatureInput,
+  type ExtractFromDocumentInput,
   type ExtractFromTranscriptInput,
 } from "@repo/domain/schemas";
 import { cn } from "@/lib/utils";
@@ -17,10 +21,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { createFeatureAction } from "@/app/_actions/features";
 import { extractFromTranscriptAction } from "@/app/_actions/transcript";
+import { extractFromDocumentAction } from "@/app/_actions/document";
 
-type Mode = "idea" | "transcript";
+type Mode = "idea" | "transcript" | "document";
 
-export function NewFeatureForm({ projectId }: { projectId: string }) {
+export type DocLite = { id: string; title: string };
+
+export function NewFeatureForm({
+  projectId,
+  docs,
+}: {
+  projectId: string;
+  docs: DocLite[];
+}) {
   const [mode, setMode] = useState<Mode>("idea");
 
   const tabClass = (active: boolean) =>
@@ -48,12 +61,21 @@ export function NewFeatureForm({ projectId }: { projectId: string }) {
         >
           Paste a transcript
         </button>
+        <button
+          type="button"
+          onClick={() => setMode("document")}
+          className={tabClass(mode === "document")}
+        >
+          From a document
+        </button>
       </div>
 
       {mode === "idea" ? (
         <IdeaForm projectId={projectId} />
-      ) : (
+      ) : mode === "transcript" ? (
         <TranscriptForm projectId={projectId} />
+      ) : (
+        <DocumentForm projectId={projectId} docs={docs} />
       )}
     </div>
   );
@@ -158,6 +180,92 @@ Bob: One question — should drivers be able to edit them after pickup?`}
       <div className="flex justify-end">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Extracting…" : "Extract feature from transcript"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function DocumentForm({
+  projectId,
+  docs,
+}: {
+  projectId: string;
+  docs: DocLite[];
+}) {
+  const router = useRouter();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ExtractFromDocumentInput>({
+    resolver: zodResolver(ExtractFromDocumentInputSchema),
+    defaultValues: { projectId, contextDocId: docs[0]?.id ?? "" },
+  });
+
+  if (docs.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+        No documents yet. Add a PRD or notes in the project&apos;s context
+        sources first, then create a feature from it.{" "}
+        <Link
+          href={`/projects/${projectId}`}
+          className="underline hover:text-foreground"
+        >
+          Go to the project
+        </Link>
+      </div>
+    );
+  }
+
+  const onSubmit = handleSubmit(async (values) => {
+    const result = await extractFromDocumentAction(values);
+    if (!result.ok) {
+      toast.error(result.error.message);
+      return;
+    }
+    const { featureId, otherFeaturesDetected } = result.data;
+    if (otherFeaturesDetected.length > 0) {
+      toast("Feature created", {
+        description: `This document also describes: ${otherFeaturesDetected.join(
+          "; ",
+        )}. Create them separately.`,
+      });
+    }
+    router.push(`/projects/${projectId}/features/${featureId}`);
+  });
+
+  return (
+    <form onSubmit={onSubmit} className="space-y-6">
+      <input type="hidden" {...register("projectId")} />
+
+      <div className="space-y-2">
+        <Label htmlFor="contextDocId">Document</Label>
+        <p className="text-xs text-muted-foreground">
+          Pick a PRD, requirements doc, or notes. The system extracts one
+          feature — you&apos;ll review the decisions before the pipeline runs.
+        </p>
+        <select
+          id="contextDocId"
+          {...register("contextDocId")}
+          className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+        >
+          {docs.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.title}
+            </option>
+          ))}
+        </select>
+        {errors.contextDocId ? (
+          <p className="text-sm text-destructive">
+            {errors.contextDocId.message}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex justify-end">
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Extracting…" : "Extract feature from document"}
         </Button>
       </div>
     </form>

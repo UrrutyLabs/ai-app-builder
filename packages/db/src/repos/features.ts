@@ -73,23 +73,24 @@ export async function createFeature(input: {
   return toRecord(row);
 }
 
-export async function createFeatureFromTranscript(input: {
+export async function createFeatureWithDecisions(input: {
   projectId: string;
   title: string;
   idea: string;
-  transcript: string;
+  transcript?: string | null;
   decisions: NewDecision[];
 }): Promise<FeatureRecord> {
   const decisions = input.decisions.map((d) => NewDecisionSchema.parse(d));
-  // Atomic: the feature and the decisions distilled from its transcript are
-  // created together, so a feature never lands without its provenance.
+  // Atomic: the feature and the decisions distilled from its source (a
+  // transcript or a document) are created together, so a feature never lands
+  // without its provenance.
   const row = await prisma.$transaction(async (tx) => {
     const feature = await tx.feature.create({
       data: {
         projectId: input.projectId,
         title: input.title,
         idea: input.idea,
-        transcript: input.transcript,
+        transcript: input.transcript ?? null,
       },
     });
     if (decisions.length) {

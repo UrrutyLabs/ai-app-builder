@@ -1,6 +1,6 @@
 # Feature brief — Create a feature from a document
 
-> Status: **proposed.** A third feature-creation mode alongside *typed idea* and *transcript*. Builds directly on the `Decision` entity ([`decision-entity.md`](decision-entity.md)) and the existing `ProjectContextDoc` system — **no schema change**, because the spine already reserved the `CONTEXT_DOC` source.
+> Status: **implemented** on `spec/decision-entity`. A third feature-creation mode alongside *typed idea* and *transcript*. Builds directly on the `Decision` entity ([`decision-entity.md`](decision-entity.md)) and the existing `ProjectContextDoc` system — **no schema change**, because the spine already reserved the `CONTEXT_DOC` source. The shared atomic write was generalized (`createFeatureFromTranscript` → `createFeatureWithDecisions`, optional transcript) since transcript + document are the second real case.
 
 ## Goal
 
