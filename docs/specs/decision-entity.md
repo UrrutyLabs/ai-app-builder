@@ -28,9 +28,9 @@ In scope:
 
 Explicitly **deferred** (design for it, do not build in PR 1):
 - **Spec-field ↔ decision link** (the provenance join) — lands with the *spec-as-contract* move; §7 designs it so PR 1 doesn't preclude it.
-- **Other decision sources** — `clarifying_answer`, `human_edit`, `ai_proposal`. The `sourceType` enum reserves them; only `transcript` is wired now.
 - **`Initiative` attachment** — a future additive `initiativeId` column when that table lands. Not added now (dead FK otherwise).
-- **A decisions UI / board, accept-workflow, supersede UX** — capture + consume first; surfacing comes with spec-as-contract.
+
+**Built after PR 1 (follow-on commit):** a minimal **Decisions panel** on the feature page — list grouped by kind + accept/reject (status toggle) + add a decision (sourced `HUMAN_EDIT`). This wires the `human_edit` source and the status lifecycle. Still deferred: the other AI/doc sources, edit-in-place, supersession, and a full board.
 
 ## Design
 

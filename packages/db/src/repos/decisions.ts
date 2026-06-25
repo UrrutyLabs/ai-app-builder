@@ -73,3 +73,43 @@ export async function listDecisionsByFeature(
   });
   return rows.map(toRecord);
 }
+
+export async function getDecisionById(
+  id: string,
+): Promise<DecisionRecord | null> {
+  const row = await prisma.decision.findUnique({ where: { id } });
+  return row ? toRecord(row) : null;
+}
+
+/** Add a single decision (e.g. a human-authored one from the Decisions panel). */
+export async function createDecision(
+  featureId: string,
+  input: NewDecision,
+): Promise<DecisionRecord> {
+  const d = NewDecisionSchema.parse(input);
+  const row = await prisma.decision.create({
+    data: {
+      featureId,
+      kind: d.kind,
+      status: d.status,
+      statement: d.statement,
+      rationale: d.rationale ?? null,
+      sourceType: d.sourceType,
+      sourceId: d.sourceId ?? null,
+      createdBy: d.createdBy,
+      decidedAt: d.status === "OPEN" ? null : new Date(),
+    },
+  });
+  return toRecord(row);
+}
+
+export async function setDecisionStatus(
+  id: string,
+  status: DecisionStatus,
+): Promise<DecisionRecord> {
+  const row = await prisma.decision.update({
+    where: { id },
+    data: { status, decidedAt: status === "OPEN" ? null : new Date() },
+  });
+  return toRecord(row);
+}

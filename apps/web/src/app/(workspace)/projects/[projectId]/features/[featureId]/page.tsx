@@ -17,9 +17,8 @@ import { Badge } from "@/components/ui/badge";
 import { GenerateQuestionsButton } from "@/components/feature/generate-questions-button";
 import { AnswerForm } from "@/components/feature/answer-form";
 import { ExportButtons } from "@/components/feature/export-buttons";
-import { TranscriptContextView } from "@/components/feature/transcript-context-view";
+import { DecisionsPanel } from "@/components/feature/decisions-panel";
 import { CollapsibleStage } from "@/components/feature/collapsible-stage";
-import { groupDecisions } from "@/lib/transcript-context";
 
 export const dynamic = "force-dynamic";
 
@@ -120,12 +119,12 @@ export default async function FeaturePage({
   const plan = feature.plan
     ? ImplementationPlanSchema.parse(feature.plan)
     : null;
-  const grouped = groupDecisions(await listDecisionsByFeature(feature.id));
-  const hasTranscriptContext =
-    grouped.decisions.length +
-      grouped.constraints.length +
-      grouped.openQuestions.length >
-    0;
+  const decisions = (await listDecisionsByFeature(feature.id)).map((d) => ({
+    id: d.id,
+    kind: d.kind,
+    status: d.status,
+    statement: d.statement,
+  }));
 
   const hasQuestions = !!questions && questions.length > 0;
   const hasAnswers = !!answers && answers.length > 0;
@@ -209,15 +208,13 @@ export default async function FeaturePage({
           icon={<StageIcon state="done" />}
         >
           <p className="whitespace-pre-wrap text-sm">{feature.idea}</p>
-          {hasTranscriptContext ? (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Distilled from the refinement transcript — fed into every
-                downstream step.
-              </p>
-              <TranscriptContextView context={grouped} />
-            </div>
-          ) : null}
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Decisions ground every downstream step — accept, reject, or add
+              your own.
+            </p>
+            <DecisionsPanel featureId={feature.id} decisions={decisions} />
+          </div>
         </CollapsibleStage>
 
         <CollapsibleStage
