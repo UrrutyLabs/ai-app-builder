@@ -15,6 +15,7 @@ import {
 import { getMyProject } from "@/lib/auth/scope";
 import { Badge } from "@/components/ui/badge";
 import { ExportButtons } from "@/components/feature/export-buttons";
+import { deriveStageStates } from "@/lib/feature-stages";
 
 export const dynamic = "force-dynamic";
 
@@ -133,41 +134,33 @@ export default async function FeaturePage({
 
   const hubHref = `/projects/${project.id}/features/${feature.id}`;
 
-  // Stage states + one-line summaries for the map.
-  const qaState: StageState = hasAnswers ? "done" : "active";
+  // Stage states + one-line summaries for the map. States come from the shared
+  // helper so the hub and the per-page stepper always agree.
+  const stages = deriveStageStates(feature);
+  const stateOf = (key: string): StageState =>
+    stages.find((s) => s.key === key)?.state ?? "active";
+  const qaState = stateOf("qa");
   const qaSummary = !hasQuestions
     ? "Not started — generate clarifying questions"
     : hasAnswers
       ? `${questions.length} questions · answered${feature.transcript ? " · from transcript" : ""}`
       : `${questions.length} questions · awaiting answers`;
 
-  const specState: StageState = !hasAnswers
-    ? "locked"
-    : hasSpec
-      ? "done"
-      : "active";
+  const specState = stateOf("spec");
   const specSummary = !hasAnswers
     ? "Answer the questions first"
     : hasSpec && spec
       ? `${spec.acceptanceCriteria.length} acceptance criteria${isApproved ? " · approved" : ""}${versionCount > 0 ? ` · v${versionCount}` : ""}`
       : "Not generated yet";
 
-  const planState: StageState = !isApproved
-    ? "locked"
-    : hasPlan
-      ? "done"
-      : "active";
+  const planState = stateOf("plan");
   const planSummary = !isApproved
     ? "Approve the spec first"
     : hasPlan && plan
       ? `${plan.fileChanges.length} file changes${feature.planStale ? " · spec changed — may be stale" : ""}`
       : "Not generated yet";
 
-  const prState: StageState = !hasPlan
-    ? "locked"
-    : feature.prUrl
-      ? "done"
-      : "active";
+  const prState = stateOf("pr");
   const prSummary = !hasPlan
     ? "Generate a plan first"
     : feature.prUrl
