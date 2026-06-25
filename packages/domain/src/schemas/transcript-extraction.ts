@@ -7,10 +7,10 @@ import { z } from "zod";
 const BULLET_MAX = 400;
 
 /**
- * What we persist on Feature.transcriptContext — the structured leftovers
- * after the LLM has lifted out `title` and `idea` into the Feature record.
- * These seed the spec's assumptions / openQuestions and ground the
- * generate-questions and generate-spec prompts.
+ * The structured leftovers from the LLM extraction after `title` and `idea`
+ * are lifted into the Feature record. The action maps these arrays into
+ * first-class `Decision` rows (see docs/specs/decision-entity.md); they ground
+ * the generate-questions and generate-spec prompts.
  */
 export const TranscriptContextSchema = z.object({
   decisions: z.array(z.string().min(1).max(BULLET_MAX)).max(50),

@@ -1,9 +1,9 @@
-import type { TranscriptContext } from "@repo/domain/schemas";
+import type { GroupedDecisions } from "@/lib/transcript-context";
 
 export function TranscriptContextView({
   context,
 }: {
-  context: TranscriptContext;
+  context: GroupedDecisions;
 }) {
   const sections: Array<{ label: string; items: string[] }> = [
     { label: "Decisions", items: context.decisions },

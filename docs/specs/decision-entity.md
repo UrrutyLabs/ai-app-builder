@@ -1,6 +1,8 @@
 # Feature brief — The `Decision` entity (provenance spine seam)
 
-> Status: **proposed.** Implements the data-model call in [`../decisions/0001-decisions-not-tickets.md`](../decisions/0001-decisions-not-tickets.md) and the Phase 2 "Provenance MVP" in [`../roadmap.md`](../roadmap.md). This is the seam the `Initiative → Decision → Feature → Change` spine grows along — introduced as a **refactor of an existing JSON blob**, not a net-new feature.
+> Status: **PR 1 implemented** on `spec/decision-entity`. Implements the data-model call in [`../decisions/0001-decisions-not-tickets.md`](../decisions/0001-decisions-not-tickets.md) and the Phase 2 "Provenance MVP" in [`../roadmap.md`](../roadmap.md). This is the seam the `Initiative → Decision → Feature → Change` spine grows along — introduced as a **refactor of an existing JSON blob**, not a net-new feature.
+>
+> **Implementation note (PR 1):** the live DB had **0 rows** with `transcriptContext`, so the planned backfill + deprecate-then-drop was unnecessary — `transcriptContext` is dropped directly in the same migration, with every reader/writer re-routed to `Decision` rows in the same PR. The supersession self-relation and `supersedeDecision` were also cut from PR 1 (no edit path exists yet to use them); `status` keeps `SUPERSEDED`/`REJECTED` as reserved values.
 
 ## Goal
 

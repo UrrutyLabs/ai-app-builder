@@ -37,13 +37,14 @@ export async function POST(req: Request): Promise<Response> {
       getFeatureById,
       getProjectForUser,
       getRepoByProjectId,
+      listDecisionsByFeature,
       setFeatureSpec,
     },
     { summarizeConventions, summarizeTree },
     { getActiveOrganizationId, requireUser },
     { toActionError },
     { revalidatePath },
-    { parseTranscriptContext, renderTranscriptContext },
+    { renderDecisionsContext },
     { retrieveProjectContext },
   ] = await Promise.all([
     import("@repo/ai"),
@@ -111,8 +112,8 @@ export async function POST(req: Request): Promise<Response> {
           query: `${feature.idea}\n\n${answers.map((a) => a.text).join("\n")}`,
         });
 
-        const transcriptContext = renderTranscriptContext(
-          parseTranscriptContext(feature.transcriptContext),
+        const transcriptContext = renderDecisionsContext(
+          await listDecisionsByFeature(feature.id),
         );
 
         let finalSpec: import("@repo/domain/schemas").FeatureSpec | null = null;

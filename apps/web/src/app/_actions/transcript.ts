@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   ExtractFromTranscriptInputSchema,
+  type NewDecision,
 } from "@repo/domain/schemas";
 import type { ActionResult } from "@repo/domain";
 import { extractFromTranscript } from "@repo/ai";
@@ -49,16 +50,33 @@ export async function extractFromTranscriptAction(
       docsContext,
     });
 
+    // Distilled transcript items become first-class decisions (provenance:
+    // TRANSCRIPT, machine-distilled → createdBy "ai"). Settled items are
+    // ACCEPTED; open questions stay OPEN to seed the questions/spec step.
+    const mk = (
+      kind: NewDecision["kind"],
+      status: NewDecision["status"],
+      statements: string[],
+    ): NewDecision[] =>
+      statements.map((statement) => ({
+        kind,
+        status,
+        statement,
+        sourceType: "TRANSCRIPT",
+        createdBy: "ai",
+      }));
+    const decisions: NewDecision[] = [
+      ...mk("DECISION", "ACCEPTED", extraction.decisions),
+      ...mk("CONSTRAINT", "ACCEPTED", extraction.constraints),
+      ...mk("OPEN_QUESTION", "OPEN", extraction.openQuestions),
+    ];
+
     feature = await createFeatureFromTranscript({
       projectId: input.projectId,
       title: extraction.title,
       idea: extraction.idea,
       transcript: input.transcript,
-      transcriptContext: {
-        decisions: extraction.decisions,
-        constraints: extraction.constraints,
-        openQuestions: extraction.openQuestions,
-      },
+      decisions,
     });
     revalidatePath(`/projects/${input.projectId}`);
   } catch (err) {

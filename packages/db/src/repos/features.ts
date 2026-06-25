@@ -8,13 +8,13 @@ import {
   AnswerListSchema,
   FeatureSpecSchema,
   ImplementationPlanSchema,
+  NewDecisionSchema,
   QuestionListSchema,
-  TranscriptContextSchema,
   type Answer,
   type FeatureSpec,
   type ImplementationPlan,
+  type NewDecision,
   type Question,
-  type TranscriptContext,
 } from "@repo/domain/schemas";
 import { prisma } from "../client";
 
@@ -35,7 +35,6 @@ export type FeatureRecord = {
   prUrl: string | null;
   prCreatedAt: Date | null;
   transcript: string | null;
-  transcriptContext: Prisma.JsonValue | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -55,7 +54,6 @@ const toRecord = (f: PrismaFeature): FeatureRecord => ({
   prUrl: f.prUrl,
   prCreatedAt: f.prCreatedAt,
   transcript: f.transcript,
-  transcriptContext: f.transcriptContext,
   createdAt: f.createdAt,
   updatedAt: f.updatedAt,
 });
@@ -80,17 +78,36 @@ export async function createFeatureFromTranscript(input: {
   title: string;
   idea: string;
   transcript: string;
-  transcriptContext: TranscriptContext;
+  decisions: NewDecision[];
 }): Promise<FeatureRecord> {
-  const validated = TranscriptContextSchema.parse(input.transcriptContext);
-  const row = await prisma.feature.create({
-    data: {
-      projectId: input.projectId,
-      title: input.title,
-      idea: input.idea,
-      transcript: input.transcript,
-      transcriptContext: validated as Prisma.InputJsonValue,
-    },
+  const decisions = input.decisions.map((d) => NewDecisionSchema.parse(d));
+  // Atomic: the feature and the decisions distilled from its transcript are
+  // created together, so a feature never lands without its provenance.
+  const row = await prisma.$transaction(async (tx) => {
+    const feature = await tx.feature.create({
+      data: {
+        projectId: input.projectId,
+        title: input.title,
+        idea: input.idea,
+        transcript: input.transcript,
+      },
+    });
+    if (decisions.length) {
+      await tx.decision.createMany({
+        // Coerce optional → null for Prisma under exactOptionalPropertyTypes.
+        data: decisions.map((d) => ({
+          featureId: feature.id,
+          kind: d.kind,
+          status: d.status,
+          statement: d.statement,
+          rationale: d.rationale ?? null,
+          sourceType: d.sourceType,
+          sourceId: d.sourceId ?? null,
+          createdBy: d.createdBy,
+        })),
+      });
+    }
+    return feature;
   });
   return toRecord(row);
 }

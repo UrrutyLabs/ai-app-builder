@@ -8,16 +8,14 @@ import { generateQuestions } from "@repo/ai";
 import {
   getFeatureById,
   getRepoByProjectId,
+  listDecisionsByFeature,
   setFeatureQuestions,
   type FeatureRecord,
 } from "@repo/db";
 import { summarizeConventions, summarizeTree } from "@repo/repos";
 import { requireMyProject } from "@/lib/auth/scope";
 import { toActionError } from "@/lib/action-error";
-import {
-  parseTranscriptContext,
-  renderTranscriptContext,
-} from "@/lib/transcript-context";
+import { renderDecisionsContext } from "@/lib/transcript-context";
 import { retrieveProjectContext } from "@/lib/context-retrieval";
 
 const InputSchema = z.object({
@@ -46,8 +44,8 @@ export async function generateQuestionsAction(
       query: feature.idea,
     });
 
-    const transcriptContext = renderTranscriptContext(
-      parseTranscriptContext(feature.transcriptContext),
+    const transcriptContext = renderDecisionsContext(
+      await listDecisionsByFeature(feature.id),
     );
 
     const questions = await generateQuestions({

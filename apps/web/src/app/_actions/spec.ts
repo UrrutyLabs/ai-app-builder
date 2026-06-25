@@ -19,6 +19,7 @@ import {
   getFeatureById,
   getRepoByProjectId,
   getSpecVersionById,
+  listDecisionsByFeature,
   listSpecVersionsByFeatureId,
   setFeatureSpec,
   type FeatureRecord,
@@ -29,10 +30,7 @@ import {
 } from "@repo/repos";
 import { requireMyProject } from "@/lib/auth/scope";
 import { toActionError } from "@/lib/action-error";
-import {
-  parseTranscriptContext,
-  renderTranscriptContext,
-} from "@/lib/transcript-context";
+import { renderDecisionsContext } from "@/lib/transcript-context";
 import { retrieveProjectContext } from "@/lib/context-retrieval";
 
 const FeatureIdInput = z.object({
@@ -70,8 +68,8 @@ export async function generateSpecAction(
       query: `${feature.idea}\n\n${answers.map((a) => a.text).join("\n")}`,
     });
 
-    const transcriptContext = renderTranscriptContext(
-      parseTranscriptContext(feature.transcriptContext),
+    const transcriptContext = renderDecisionsContext(
+      await listDecisionsByFeature(feature.id),
     );
 
     const spec = await generateSpec({

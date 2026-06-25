@@ -4,6 +4,7 @@ import { ArrowRight, Circle, CircleCheck, CircleDot, Lock } from "lucide-react";
 import {
   countSpecVersionsByFeatureId,
   getFeatureById,
+  listDecisionsByFeature,
 } from "@repo/db";
 import {
   AnswerListSchema,
@@ -18,7 +19,7 @@ import { AnswerForm } from "@/components/feature/answer-form";
 import { ExportButtons } from "@/components/feature/export-buttons";
 import { TranscriptContextView } from "@/components/feature/transcript-context-view";
 import { CollapsibleStage } from "@/components/feature/collapsible-stage";
-import { parseTranscriptContext } from "@/lib/transcript-context";
+import { groupDecisions } from "@/lib/transcript-context";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +120,12 @@ export default async function FeaturePage({
   const plan = feature.plan
     ? ImplementationPlanSchema.parse(feature.plan)
     : null;
-  const transcriptContext = parseTranscriptContext(feature.transcriptContext);
+  const grouped = groupDecisions(await listDecisionsByFeature(feature.id));
+  const hasTranscriptContext =
+    grouped.decisions.length +
+      grouped.constraints.length +
+      grouped.openQuestions.length >
+    0;
 
   const hasQuestions = !!questions && questions.length > 0;
   const hasAnswers = !!answers && answers.length > 0;
@@ -203,13 +209,13 @@ export default async function FeaturePage({
           icon={<StageIcon state="done" />}
         >
           <p className="whitespace-pre-wrap text-sm">{feature.idea}</p>
-          {transcriptContext ? (
+          {hasTranscriptContext ? (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground">
                 Distilled from the refinement transcript — fed into every
                 downstream step.
               </p>
-              <TranscriptContextView context={transcriptContext} />
+              <TranscriptContextView context={grouped} />
             </div>
           ) : null}
         </CollapsibleStage>

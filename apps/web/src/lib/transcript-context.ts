@@ -1,40 +1,59 @@
-import {
-  TranscriptContextSchema,
-  type TranscriptContext,
-} from "@repo/domain/schemas";
+import type { DecisionRecord } from "@repo/db";
 
-/** Parse a Feature.transcriptContext JSON column into a typed shape. */
-export function parseTranscriptContext(
-  raw: unknown,
-): TranscriptContext | null {
-  if (!raw) return null;
-  const parsed = TranscriptContextSchema.safeParse(raw);
-  return parsed.success ? parsed.data : null;
+export type GroupedDecisions = {
+  decisions: string[];
+  constraints: string[];
+  openQuestions: string[];
+};
+
+/**
+ * Group a feature's active decisions by kind for display and prompting.
+ * Rejected/superseded decisions are excluded — only live ones ground the work.
+ */
+export function groupDecisions(decisions: DecisionRecord[]): GroupedDecisions {
+  const active = decisions.filter(
+    (d) => d.status !== "REJECTED" && d.status !== "SUPERSEDED",
+  );
+  return {
+    decisions: active
+      .filter((d) => d.kind === "DECISION")
+      .map((d) => d.statement),
+    constraints: active
+      .filter((d) => d.kind === "CONSTRAINT")
+      .map((d) => d.statement),
+    openQuestions: active
+      .filter((d) => d.kind === "OPEN_QUESTION")
+      .map((d) => d.statement),
+  };
 }
 
-/** Render TranscriptContext as a prompt block for question / spec generation. */
-export function renderTranscriptContext(
-  ctx: TranscriptContext | null,
+/**
+ * Render a feature's decisions as the grounding block for question / spec
+ * generation. Output is byte-identical to the prior transcript-context block,
+ * so swapping the source (blob → Decision rows) changes no prompt input.
+ */
+export function renderDecisionsContext(
+  decisions: DecisionRecord[],
 ): string | null {
-  if (!ctx) return null;
+  const g = groupDecisions(decisions);
   const sections: string[] = [];
-  if (ctx.decisions.length) {
+  if (g.decisions.length) {
     sections.push(
-      `Decisions settled in the refinement transcript:\n${ctx.decisions
+      `Decisions settled in the refinement transcript:\n${g.decisions
         .map((d) => `- ${d}`)
         .join("\n")}`,
     );
   }
-  if (ctx.constraints.length) {
+  if (g.constraints.length) {
     sections.push(
-      `Constraints surfaced in the transcript:\n${ctx.constraints
+      `Constraints surfaced in the transcript:\n${g.constraints
         .map((c) => `- ${c}`)
         .join("\n")}`,
     );
   }
-  if (ctx.openQuestions.length) {
+  if (g.openQuestions.length) {
     sections.push(
-      `Open questions left unresolved in the transcript:\n${ctx.openQuestions
+      `Open questions left unresolved in the transcript:\n${g.openQuestions
         .map((q) => `- ${q}`)
         .join("\n")}`,
     );
