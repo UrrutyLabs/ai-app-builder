@@ -46,8 +46,8 @@ The grounding features are done; what's left is non-feature work to get this in 
 
 Make a handful of teams sticky (Vision §10). This is where the wedge produces its actual output.
 
-- **Tickets out** — export an approved spec to Linear/Jira with acceptance criteria. The product currently stops at spec/plan/PR; this is the missing exit (Vision §3).
-- **Provenance MVP** — record the *source* of each spec field (transcript / doc / AI / human edit). First concrete step toward the `Initiative → Decisions` spine (Vision §5). **See the strategic call below.**
+- **Tickets out (projection)** — render + sync an approved spec to Linear/Jira with acceptance criteria. A ticket is an *emitted view*, not the source of truth; this is the missing exit (Vision §3).
+- **Provenance MVP = the `Decision` entity** — record the *source* of each spec field (transcript / doc / AI / human edit) as first-class, provenanced decisions. The seam toward the `Initiative → Decision → Feature → Change` spine; see [`decisions/0001`](decisions/0001-decisions-not-tickets.md).
 - **PR-quality hardening** against partners' real repos — the codegen loop's failure modes only surface on real codebases.
 
 ## Phase 3 — Collaboration & multiplayer
@@ -80,16 +80,17 @@ Every org has its own taste, stack, and tools. *(was v1.0 + strategic bets)*
 
 ---
 
-## The strategic call to make before Phase 2
+## The strategic call before Phase 2 — ✅ decided
 
-**Migrate the data model toward the Loop spine now, or ride the current schema and migrate later?**
+**Decided 2026-06-25:** [`docs/decisions/0001-decisions-not-tickets.md`](decisions/0001-decisions-not-tickets.md) — *model the decision, emit the ticket.*
 
-Today's schema is `Project → Feature → Spec/Plan/PR`, single-player. `Vision.md` §5 describes a different spine — `Initiative → Decisions → Tickets → Changes`, with per-field provenance and queryable lineage — and says "get it right early." These don't match.
+Today's schema is `Project → Feature → Spec/Plan/PR`, single-player. Rather than the `Initiative → Decisions → Tickets → Changes` spine sketched earlier, the spine is **`Initiative → Decision → Feature → Change`**: a **`Decision`** is a first-class, provenanced node; a **ticket is a projection** Loop emits and syncs, not an internal entity.
 
-- **Ride it** → fastest path to validating the wedge; every week of build adds migration cost later.
-- **Migrate now** → slower to first users, but avoids re-platforming once provenance and multiplayer become load-bearing.
+- **Ride the current schema through Phase 1.**
+- In **Phase 2**, build the **Provenance MVP *as* the `Decision` entity** — the seam the migration happens along — on the stable `(sourceType, sourceId)` that context docs and transcripts already attach to every chunk.
+- **"Tickets out" is render + sync** (an integration boundary), not authorship. Don't build the portfolio/board layer yet; model `Initiative`/`Decision` so Loop can absorb it once agent volume makes the external board the bottleneck.
 
-Recommended: ride it through Phase 1, then introduce the **Phase 2 provenance MVP** as the seam the later migration happens along — so the schema bends toward `Initiative` before it's expensive to change. Context docs and transcripts already give every retrievable chunk a stable `(sourceType, sourceId)`; that's the seam. Decide deliberately; don't let it default.
+Rationale (incl. why an AI-driven future *strengthens* this) is in the decision record.
 
 ---
 
@@ -97,7 +98,7 @@ Recommended: ride it through Phase 1, then introduce the **Phase 2 provenance MV
 
 - **Phases 1 → 3 are sequential and oriented at one outcome: real teams using it.** Phase 1 is mostly stabilization + deploy, not new features.
 - **The highest-leverage features (grounding: code, transcripts, docs) are shipped.** The next net-new frontier is **tickets out** (Phase 2) — the wedge's actual output.
-- **The data-model decision is the highest-stakes architectural call**, broken out above because it shapes everything after the wedge is validated.
+- **The data-model decision is settled** ([`decisions/0001`](decisions/0001-decisions-not-tickets.md)) — decision is a node, ticket is a projection — and it shapes everything after the wedge is validated.
 - **Phases 4 → 5 can interleave** with the above based on customer signal.
 
 ## Maintenance

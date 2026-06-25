@@ -386,11 +386,11 @@ The branch is pushed and a PR opened via `@repo/repos` (`pull-request.ts`); `prU
 
 Tracked in `roadmap.md`. Not built yet:
 
-- **Tickets out** — export an approved spec to Linear/Jira with acceptance criteria.
-- **Provenance / lineage** — record the source of each artifact field, the first step toward the `Initiative → Decisions` spine in `Vision.md` §5. Context docs and transcripts already give every retrievable chunk a stable `(sourceType, sourceId)`, which is the seam this builds on.
+- **Tickets out (projection)** — render + sync an approved spec to Linear/Jira; a ticket is an emitted view, not the source of truth.
+- **Provenance / lineage** — record the source of each artifact field as a first-class `Decision`, the first step toward the `Initiative → Decision → Feature → Change` spine. Context docs and transcripts already give every retrievable chunk a stable `(sourceType, sourceId)`, which is the seam this builds on. See [`decisions/0001-decisions-not-tickets.md`](decisions/0001-decisions-not-tickets.md).
 - **Collaboration** — per-section spec comments; real-time multiplayer editing.
 - **Outcome tracking** — cycle-time metrics, spec-drift detection, plan-accuracy feedback.
 - **Enterprise** — multi-LLM provider abstraction, org-level prompt customization, custom `FeatureSpec` fields.
 - **Richer context sources** — binary (PDF/DOCX) document ingestion, feature-scoped context docs, Figma design intent, Notion ingestion. Today's `ProjectContextDoc` is the concrete pattern these will generalize from.
 
-Do not pre-build hooks for these. The one architectural decision worth making deliberately before extending is whether to evolve the current `Project → Feature` schema toward the `Initiative → Decisions → Tickets → Changes` provenance spine (`Vision.md` §5); see `roadmap.md` for the recommendation.
+Do not pre-build hooks for these. The data-model spine is now decided ([`decisions/0001-decisions-not-tickets.md`](decisions/0001-decisions-not-tickets.md)): evolve `Project → Feature` toward **`Initiative → Decision → Feature → Change`**, where a `Decision` is a first-class provenanced node and a ticket is an emitted projection — not an internal entity. The `Decision` entity is the Phase 2 seam; see `roadmap.md`.
