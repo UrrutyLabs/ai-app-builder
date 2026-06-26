@@ -14,10 +14,8 @@ import {
 } from "@repo/domain/schemas";
 import { getMyProject } from "@/lib/auth/scope";
 import { Badge } from "@/components/ui/badge";
-import { GenerateQuestionsButton } from "@/components/feature/generate-questions-button";
-import { AnswerForm } from "@/components/feature/answer-form";
 import { ExportButtons } from "@/components/feature/export-buttons";
-import { CollapsibleStage } from "@/components/feature/collapsible-stage";
+import { deriveStageStates } from "@/lib/feature-stages";
 
 export const dynamic = "force-dynamic";
 
@@ -95,13 +93,10 @@ function StageLinkRow({
 
 export default async function FeaturePage({
   params,
-  searchParams,
 }: {
   params: Promise<{ projectId: string; featureId: string }>;
-  searchParams: Promise<{ edit?: string }>;
 }) {
   const { projectId, featureId } = await params;
-  const { edit } = await searchParams;
   const [project, feature] = await Promise.all([
     getMyProject(projectId),
     getFeatureById(featureId),
@@ -134,51 +129,38 @@ export default async function FeaturePage({
   const hasSpec = !!spec;
   const hasPlan = !!plan;
   const isApproved = !!feature.approvedAt;
-  const editingAnswers = edit === "answers";
 
   const versionCount = await countSpecVersionsByFeatureId(feature.id);
 
   const hubHref = `/projects/${project.id}/features/${feature.id}`;
 
-  const showAnswerForm =
-    hasQuestions &&
-    (feature.status === "QUESTIONS_GENERATED" || editingAnswers);
-
-  // Stage states + one-line summaries for the map.
-  const qaState: StageState = hasAnswers ? "done" : "active";
+  // Stage states + one-line summaries for the map. States come from the shared
+  // helper so the hub and the per-page stepper always agree.
+  const stages = deriveStageStates(feature);
+  const stateOf = (key: string): StageState =>
+    stages.find((s) => s.key === key)?.state ?? "active";
+  const qaState = stateOf("qa");
   const qaSummary = !hasQuestions
     ? "Not started — generate clarifying questions"
     : hasAnswers
       ? `${questions.length} questions · answered${feature.transcript ? " · from transcript" : ""}`
       : `${questions.length} questions · awaiting answers`;
 
-  const specState: StageState = !hasAnswers
-    ? "locked"
-    : hasSpec
-      ? "done"
-      : "active";
+  const specState = stateOf("spec");
   const specSummary = !hasAnswers
     ? "Answer the questions first"
     : hasSpec && spec
       ? `${spec.acceptanceCriteria.length} acceptance criteria${isApproved ? " · approved" : ""}${versionCount > 0 ? ` · v${versionCount}` : ""}`
       : "Not generated yet";
 
-  const planState: StageState = !isApproved
-    ? "locked"
-    : hasPlan
-      ? "done"
-      : "active";
+  const planState = stateOf("plan");
   const planSummary = !isApproved
     ? "Approve the spec first"
     : hasPlan && plan
       ? `${plan.fileChanges.length} file changes${feature.planStale ? " · spec changed — may be stale" : ""}`
       : "Not generated yet";
 
-  const prState: StageState = !hasPlan
-    ? "locked"
-    : feature.prUrl
-      ? "done"
-      : "active";
+  const prState = stateOf("pr");
   const prSummary = !hasPlan
     ? "Generate a plan first"
     : feature.prUrl
@@ -212,73 +194,12 @@ export default async function FeaturePage({
           href={`${hubHref}/idea`}
         />
 
-        <CollapsibleStage
+        <StageLinkRow
+          state={qaState}
           label="Q&A"
           summary={qaSummary}
-          icon={<StageIcon state={qaState} />}
-          defaultOpen={!hasAnswers || editingAnswers}
-        >
-          {!hasQuestions ? (
-            <>
-              <p className="text-sm text-muted-foreground">
-                No questions yet — generate them below.
-              </p>
-              <GenerateQuestionsButton
-                featureId={feature.id}
-                hasQuestions={false}
-              />
-            </>
-          ) : showAnswerForm ? (
-            <>
-              <AnswerForm
-                featureId={feature.id}
-                questions={questions}
-                initialAnswers={answers ?? []}
-              />
-              <p className="text-xs text-muted-foreground">
-                Regenerating questions will clear your answers.
-              </p>
-              <GenerateQuestionsButton featureId={feature.id} hasQuestions />
-            </>
-          ) : (
-            <>
-              <ol className="space-y-4 text-sm">
-                {questions.map((q, i) => {
-                  const a = answers?.find((x) => x.questionId === q.id);
-                  return (
-                    <li key={q.id} className="space-y-1">
-                      <div className="flex gap-3">
-                        <span className="font-mono text-muted-foreground">
-                          {i + 1}.
-                        </span>
-                        <span className="font-medium">{q.text}</span>
-                      </div>
-                      <p className="ml-6 whitespace-pre-wrap text-foreground/80">
-                        {a ? (
-                          a.text
-                        ) : (
-                          <span className="italic text-muted-foreground">
-                            no answer
-                          </span>
-                        )}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ol>
-              <div className="flex items-center gap-3">
-                <Link
-                  href={`${hubHref}?edit=answers`}
-                  className="text-sm text-muted-foreground underline transition-colors hover:text-foreground"
-                >
-                  Edit answers
-                </Link>
-                <span className="text-muted-foreground/40">·</span>
-                <GenerateQuestionsButton featureId={feature.id} hasQuestions />
-              </div>
-            </>
-          )}
-        </CollapsibleStage>
+          href={`${hubHref}/qa`}
+        />
 
         <StageLinkRow
           state={specState}
