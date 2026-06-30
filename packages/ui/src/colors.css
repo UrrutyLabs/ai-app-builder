@@ -1,0 +1,74 @@
+/* =========================================================================
+   Loop — shared color tokens (single source of truth).
+   Imported by apps/web (globals.css) and apps/marketing (theme.css).
+
+   Contains ONLY the cross-app palette: the neutral grayscale base + the violet
+   brand (oklch hue 305). Each app maps its own semantic accents (--primary,
+   --ring, --link) onto these and keeps its app-specific tokens locally.
+   Light-first; .dark overrides at the bottom.
+   ========================================================================= */
+
+:root {
+  /* Neutral base (grayscale) */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+
+  /* Brand — violet. THE accent. */
+  --brand: oklch(0.52 0.21 305);
+  --brand-foreground: oklch(0.985 0 0);
+  --brand-hover: oklch(0.45 0.19 305);
+  --brand-active: oklch(0.4 0.17 305);
+  --brand-subtle: oklch(0.97 0.015 305);
+  --brand-subtle-foreground: oklch(0.38 0.16 305);
+  --brand-border: oklch(0.88 0.06 305);
+
+  /* Full violet ramp (305) — for anything the semantic tokens don't cover. */
+  --violet-50: oklch(0.97 0.015 305);
+  --violet-100: oklch(0.94 0.03 305);
+  --violet-200: oklch(0.88 0.06 305);
+  --violet-300: oklch(0.8 0.11 305);
+  --violet-400: oklch(0.66 0.17 305);
+  --violet-500: oklch(0.58 0.2 305);
+  --violet-600: oklch(0.52 0.21 305);
+  --violet-700: oklch(0.45 0.19 305);
+  --violet-800: oklch(0.38 0.16 305);
+  --violet-900: oklch(0.32 0.13 305);
+  --violet-950: oklch(0.24 0.1 305);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+
+  --brand: oklch(0.62 0.2 305);
+  --brand-foreground: oklch(0.985 0 0);
+  --brand-hover: oklch(0.68 0.19 305);
+  --brand-active: oklch(0.72 0.18 305);
+  --brand-subtle: oklch(0.32 0.09 305);
+  --brand-subtle-foreground: oklch(0.85 0.1 305);
+  --brand-border: oklch(0.4 0.12 305);
+}
