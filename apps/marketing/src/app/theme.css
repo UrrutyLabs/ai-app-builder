@@ -1,0 +1,257 @@
+/* =========================================================================
+   Loop — brand & landing theme
+   Hand this file to the design tool as the source of truth for color,
+   type, spacing, and the core component primitives.
+
+   Brand accent: violet (oklch hue 305). Neutral base: grayscale (chroma 0).
+   Light-first — dark mode is an optional appendix at the bottom.
+
+   Usage rules for whoever builds on this:
+   - Use the semantic tokens (var(--brand), var(--foreground)…), never raw
+     hex/oklch, so the page stays theme-able.
+   - The violet accent is used SPARINGLY: primary CTA, links, focus rings,
+     one highlight per section. Everything else is neutral gray.
+   - Two text weights as a rule (400 / 500); 600 only for big display headings.
+   ========================================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap');
+
+/* ---- Design tokens ---------------------------------------------------- */
+:root {
+  /* Neutral base (grayscale) */
+  --background:            oklch(1 0 0);
+  --foreground:            oklch(0.145 0 0);
+  --card:                  oklch(1 0 0);
+  --card-foreground:       oklch(0.145 0 0);
+  --muted:                 oklch(0.97 0 0);
+  --muted-foreground:      oklch(0.556 0 0);
+  --secondary:             oklch(0.97 0 0);
+  --secondary-foreground:  oklch(0.205 0 0);
+  --border:                oklch(0.922 0 0);
+  --input:                 oklch(0.922 0 0);
+
+  /* Neutral "primary" — near-black. Use for restrained dark buttons/text. */
+  --primary:               oklch(0.205 0 0);
+  --primary-foreground:    oklch(0.985 0 0);
+
+  /* Brand — violet. THE accent. */
+  --brand:                   oklch(0.52 0.21 305);   /* CTA bg, active state */
+  --brand-foreground:        oklch(0.985 0 0);       /* text on --brand */
+  --brand-hover:             oklch(0.45 0.19 305);
+  --brand-active:            oklch(0.40 0.17 305);
+  --brand-subtle:            oklch(0.97 0.015 305);   /* badge / highlight bg */
+  --brand-subtle-foreground: oklch(0.38 0.16 305);   /* text on --brand-subtle */
+  --brand-border:            oklch(0.88 0.06 305);
+  --link:                    oklch(0.52 0.21 305);
+  --ring:                    oklch(0.52 0.21 305);    /* focus rings */
+
+  /* Full violet ramp (for anything the tokens above don't cover) */
+  --violet-50:  oklch(0.97 0.015 305);
+  --violet-100: oklch(0.94 0.03  305);
+  --violet-200: oklch(0.88 0.06  305);
+  --violet-300: oklch(0.80 0.11  305);
+  --violet-400: oklch(0.66 0.17  305);
+  --violet-500: oklch(0.58 0.20  305);
+  --violet-600: oklch(0.52 0.21  305);   /* = --brand */
+  --violet-700: oklch(0.45 0.19  305);
+  --violet-800: oklch(0.38 0.16  305);
+  --violet-900: oklch(0.32 0.13  305);
+  --violet-950: oklch(0.24 0.10  305);
+
+  /* Typography */
+  --font-sans: "Geist", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  /* Type scale (marketing) */
+  --text-display: 3.25rem;   /* hero headline      */
+  --text-h1:      2.25rem;   /* section headline   */
+  --text-h2:      1.5rem;    /* sub-section        */
+  --text-h3:      1.125rem;  /* feature title      */
+  --text-body:    1rem;
+  --text-small:   0.875rem;
+  --text-eyebrow: 0.8125rem; /* section kicker     */
+  --leading-tight: 1.15;
+  --leading-body:  1.65;
+
+  /* Radius (from the product app) */
+  --radius:     0.625rem;
+  --radius-sm:  calc(var(--radius) * 0.6);
+  --radius-md:  calc(var(--radius) * 0.8);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+
+  /* Layout */
+  --container:        1120px;
+  --container-narrow: 720px;
+  --section-y:        6rem;   /* vertical rhythm between sections */
+}
+
+/* ---- Base ------------------------------------------------------------- */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 { font-weight: 500; line-height: var(--leading-tight); margin: 0; }
+h1 { font-size: var(--text-h1); }
+h2 { font-size: var(--text-h2); }
+h3 { font-size: var(--text-h3); }
+
+p { margin: 0; }
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+code, kbd, pre { font-family: var(--font-mono); }
+
+/* ---- Layout helpers --------------------------------------------------- */
+.container {
+  width: 100%;
+  max-width: var(--container);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+.container-narrow { max-width: var(--container-narrow); }
+
+.section { padding-block: var(--section-y); }
+
+/* ---- Type helpers ----------------------------------------------------- */
+.display {
+  font-size: var(--text-display);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+}
+.eyebrow {
+  font-size: var(--text-eyebrow);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+.lead { font-size: 1.125rem; color: var(--muted-foreground); }
+.muted { color: var(--muted-foreground); }
+
+/* ---- Buttons ---------------------------------------------------------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 2.75rem;
+  padding-inline: 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 500;
+  font-size: var(--text-small);
+  cursor: pointer;
+  transition: background-color .15s ease, border-color .15s ease;
+}
+/* Primary CTA — brand violet (use this for "Request access") */
+.btn-brand { background: var(--brand); color: var(--brand-foreground); }
+.btn-brand:hover { background: var(--brand-hover); text-decoration: none; }
+.btn-brand:active { background: var(--brand-active); }
+
+/* Secondary — neutral outline */
+.btn-secondary {
+  background: transparent;
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.btn-secondary:hover { background: var(--muted); text-decoration: none; }
+
+/* Tertiary — quiet text button */
+.btn-ghost { background: transparent; color: var(--foreground); }
+.btn-ghost:hover { background: var(--muted); text-decoration: none; }
+
+/* ---- Badge / pill (brand-subtle) ------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: var(--brand-subtle);
+  color: var(--brand-subtle-foreground);
+  border: 1px solid var(--brand-border);
+  font-size: var(--text-eyebrow);
+  font-weight: 500;
+}
+
+/* ---- Card ------------------------------------------------------------- */
+.card {
+  background: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+/* ---- Inputs (for the waitlist form) ----------------------------------- */
+.input {
+  height: 2.75rem;
+  width: 100%;
+  padding-inline: 0.875rem;
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-small);
+}
+.input::placeholder { color: var(--muted-foreground); }
+.input:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+
+/* =========================================================================
+   OPTIONAL — dark mode (deferred; light is the priority).
+   The product app uses this; the landing can ship light-only and ignore it.
+   Add class="dark" on <html> to activate.
+   ========================================================================= */
+.dark {
+  --background:            oklch(0.145 0 0);
+  --foreground:            oklch(0.985 0 0);
+  --card:                  oklch(0.205 0 0);
+  --card-foreground:       oklch(0.985 0 0);
+  --muted:                 oklch(0.269 0 0);
+  --muted-foreground:      oklch(0.708 0 0);
+  --secondary:             oklch(0.269 0 0);
+  --secondary-foreground:  oklch(0.985 0 0);
+  --border:                oklch(1 0 0 / 10%);
+  --input:                 oklch(1 0 0 / 15%);
+  --primary:               oklch(0.922 0 0);
+  --primary-foreground:    oklch(0.205 0 0);
+
+  --brand:                   oklch(0.62 0.20 305);
+  --brand-foreground:        oklch(0.985 0 0);
+  --brand-hover:             oklch(0.68 0.19 305);
+  --brand-active:            oklch(0.72 0.18 305);
+  --brand-subtle:            oklch(0.32 0.09 305);
+  --brand-subtle-foreground: oklch(0.85 0.10 305);
+  --brand-border:            oklch(0.40 0.12 305);
+  --link:                    oklch(0.80 0.13 305);
+  --ring:                    oklch(0.62 0.20 305);
+}
+
+/* ---- Landing page layout (from the design) ---------------------------- */
+html, body { margin: 0; }
+
+@media (max-width: 820px) {
+  .hero-grid  { grid-template-columns: 1fr !important; }
+  .problem-grid,
+  .why-grid,
+  .access-grid,
+  .faq-grid   { grid-template-columns: 1fr !important; gap: 24px !important; }
+  .how-grid   { grid-template-columns: 1fr !important; gap: 8px !important; }
+  .how-sticky { position: static !important; }
+  .how-step   { min-height: auto !important; padding-block: 18px !important; }
+}
