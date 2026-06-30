@@ -5,12 +5,25 @@ import { z } from "zod";
 // (which would couple Resend config into the product app's boot checks).
 // Resend vars are optional: the site renders without them; the waitlist
 // action degrades to a clear "not configured" error until the key is set.
+//
+// Treat empty / whitespace-only values as unset. A `.env` with `RESEND_API_KEY=`
+// (a common placeholder shape) loads as "", which `.optional()` alone would
+// reject — coerce it to undefined so optional really means optional.
+const emptyToUndefined = (v: unknown) =>
+  typeof v === "string" && v.trim() === "" ? undefined : v;
+
 const EnvSchema = z.object({
-  RESEND_API_KEY: z.string().min(1).optional(),
-  RESEND_AUDIENCE_ID: z.string().min(1).optional(),
-  RESEND_FROM_EMAIL: z.string().email().optional(),
-  ACCESS_REQUEST_NOTIFY_EMAIL: z.string().email().optional(),
-  NEXT_PUBLIC_SITE_URL: z.string().url().default("http://localhost:3001"),
+  RESEND_API_KEY: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  RESEND_AUDIENCE_ID: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  RESEND_FROM_EMAIL: z.preprocess(emptyToUndefined, z.string().email().optional()),
+  ACCESS_REQUEST_NOTIFY_EMAIL: z.preprocess(
+    emptyToUndefined,
+    z.string().email().optional(),
+  ),
+  NEXT_PUBLIC_SITE_URL: z.preprocess(
+    emptyToUndefined,
+    z.string().url().default("http://localhost:3001"),
+  ),
 });
 
 export const env = EnvSchema.parse({
