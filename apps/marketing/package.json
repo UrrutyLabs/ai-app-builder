@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "dotenv -e ../../.env -- next dev --port 3001",
     "build": "dotenv -e ../../.env -- next build",
+    "build:vercel": "next build",
     "start": "dotenv -e ../../.env -- next start --port 3001",
     "lint": "eslint --max-warnings 0",
     "check-types": "next typegen && tsc --noEmit"
